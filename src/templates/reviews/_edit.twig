@@ -1,8 +1,12 @@
 {# @var review \bymayo\vouch\elements\Review #}
+{# @var manualSources \bymayo\vouch\models\Source[] #}
+{# @var isManual bool #}
 
 {% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
 
-{% set title = review.getUiLabel() %}
+{% set fullPageForm = true %}
+{% set title = review.id ? review.getUiLabel() : 'New review'|t('vouch') %}
 {% set selectedSubnavItem = 'reviews' %}
 
 {% set crumbs = [
@@ -10,36 +14,142 @@
     { label: 'Reviews'|t('vouch'), url: url('vouch/reviews') },
 ] %}
 
+{% block actionButton %}
+    <input type="submit" class="btn submit" value="{{ 'Save'|t('app') }}">
+{% endblock %}
+
 {% block content %}
-    <div class="readable">
-        <h2>{{ review.title ?: 'Untitled review'|t('vouch') }}</h2>
+    <input type="hidden" name="action" value="vouch/reviews/save">
+    {{ redirectInput('vouch/reviews') }}
+    {% if review.id %}
+        <input type="hidden" name="reviewId" value="{{ review.id }}">
+    {% endif %}
 
-        <p class="light">
-            {{ review.authorName ?: 'Anonymous'|t('vouch') }}
-            {% if review.getAuthorUser() %}
-                — <a href="{{ review.getAuthorUser().cpEditUrl }}">{{ review.getAuthorUser() }}</a>
-            {% endif %}
-            ·
-            {{ review.rating }}★
-            {% if review.reviewedAt %}· {{ review.reviewedAt|datetime('short') }}{% endif %}
-        </p>
+    {% if review.id and not isManual %}
+        <div class="readable" style="background:#FFF8E1; border:1px solid #F0C36D; padding:1em 1.25em; border-radius:6px; margin-bottom:1.5em;">
+            <strong>{{ 'Heads up:'|t('vouch') }}</strong>
+            {{ 'This review came from {provider}. Any edits will be overwritten the next time the source syncs.'|t('vouch', {
+                provider: review.getSource() ? review.getSource().name : review.getSource().providerHandle,
+            }) }}
+        </div>
+    {% endif %}
 
-        {% if review.body %}
-            <blockquote>{{ review.body|nl2br }}</blockquote>
-        {% endif %}
+    {% if not review.id %}
+        {% set sourceOptions = {} %}
+        {% for s in manualSources %}
+            {% set sourceOptions = sourceOptions|merge({ (s.id): s.name }) %}
+        {% endfor %}
+        {{ forms.selectField({
+            first: true,
+            label: 'Source'|t('vouch'),
+            instructions: 'Which Manual source this review belongs to.'|t('vouch'),
+            id: 'sourceId',
+            name: 'sourceId',
+            value: review.sourceId,
+            options: sourceOptions,
+            required: true,
+        }) }}
+    {% endif %}
 
-        {% if review.response %}
-            <h3>{{ 'Business reply'|t('vouch') }}</h3>
-            <blockquote>{{ review.response|nl2br }}</blockquote>
-        {% endif %}
+    {{ forms.textField({
+        first: review.id ? true : false,
+        label: 'Rating'|t('vouch'),
+        instructions: '0–5, decimals allowed.'|t('vouch'),
+        id: 'rating',
+        name: 'rating',
+        value: review.rating,
+        type: 'number',
+        size: 5,
+        required: true,
+        errors: review.getErrors('rating'),
+    }) }}
 
-        {% if not review.approved %}
-            <form method="post" accept-charset="UTF-8">
-                {{ csrfInput() }}
-                <input type="hidden" name="action" value="vouch/reviews/approve">
-                <input type="hidden" name="reviewId" value="{{ review.id }}">
-                <button type="submit" class="btn submit">{{ 'Approve'|t('vouch') }}</button>
-            </form>
-        {% endif %}
-    </div>
+    {{ forms.textField({
+        label: 'Title'|t('vouch'),
+        id: 'title',
+        name: 'title',
+        value: review.title,
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Body'|t('vouch'),
+        id: 'body',
+        name: 'body',
+        value: review.body,
+        rows: 5,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Author name'|t('vouch'),
+        id: 'authorName',
+        name: 'authorName',
+        value: review.authorName,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Author email'|t('vouch'),
+        instructions: 'Used for Craft user matching. Stored but purged after the retention window.'|t('vouch'),
+        id: 'authorEmail',
+        name: 'authorEmail',
+        value: review.authorEmail,
+        type: 'email',
+    }) }}
+
+    {{ forms.elementSelectField({
+        label: 'Craft user (optional)'|t('vouch'),
+        instructions: 'Attach this review to a Craft user. Used by the Points trigger.'|t('vouch'),
+        id: 'authorUserId',
+        name: 'authorUserId',
+        elementType: 'craft\\elements\\User',
+        elements: review.getAuthorUser() ? [review.getAuthorUser()] : [],
+        limit: 1,
+    }) }}
+
+    {{ forms.dateTimeField({
+        label: 'Reviewed at'|t('vouch'),
+        id: 'reviewedAt',
+        name: 'reviewedAt',
+        value: review.reviewedAt,
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Business reply'|t('vouch'),
+        instructions: 'Optional response from the business to the review.'|t('vouch'),
+        id: 'response',
+        name: 'response',
+        value: review.response,
+        rows: 3,
+    }) }}
+
+    {{ forms.elementSelectField({
+        label: 'Related element'|t('vouch'),
+        instructions: 'Optionally relate this review to an entry, product, or other element.'|t('vouch'),
+        id: 'relatedElementId',
+        name: 'relatedElementId',
+        elementType: 'craft\\base\\Element',
+        elements: review.relatedElementId
+            ? [craft.app.elements.getElementById(review.relatedElementId)]|filter(e => e)
+            : [],
+        limit: 1,
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Approved'|t('vouch'),
+        instructions: 'Unapproved reviews are excluded from the public Twig and GraphQL surfaces.'|t('vouch'),
+        id: 'approved',
+        name: 'approved',
+        on: review.approved,
+    }) }}
+
+    {% if review.id %}
+        <hr>
+        <a class="error delete" role="button"
+           data-action="vouch/reviews/delete"
+           data-confirm="{{ 'Delete this review?'|t('vouch') }}"
+           data-param="reviewId"
+           data-value="{{ review.id }}"
+           data-redirect="{{ 'vouch/reviews'|hash }}">
+            {{ 'Delete review'|t('vouch') }}
+        </a>
+    {% endif %}
 {% endblock %}

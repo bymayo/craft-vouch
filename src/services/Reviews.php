@@ -10,6 +10,7 @@ use bymayo\vouch\models\Source;
 use bymayo\vouch\Vouch;
 use Craft;
 use craft\helpers\Json;
+use craft\helpers\StringHelper;
 use yii\base\Component;
 
 /**
@@ -108,6 +109,72 @@ class Reviews extends Component
         }
 
         return $review;
+    }
+
+    /**
+     * Build (don't save) a new manual review attached to the given source.
+     * Use this from controllers — it sets up the externalId, applies the
+     * source's moderation defaults, and matches authors-to-users. Caller is
+     * responsible for setting any other fields and then calling `save()`.
+     */
+    public function newManualReview(Source $source): Review
+    {
+        $review = new Review();
+        $review->sourceId = $source->id;
+        $review->externalId = 'manual:' . StringHelper::UUID();
+        $review->relatedElementId = $source->targetElementId;
+        $review->reviewedAt = new \DateTime();
+        $review->approved = !$source->requiresApproval;
+        return $review;
+    }
+
+    /**
+     * Persist a manually-authored review. Triggers `EVENT_AFTER_SYNC_REVIEW`
+     * and (if newly approved) `EVENT_AFTER_APPROVE_REVIEW` — same contract
+     * downstream listeners see for synced reviews, so a single set of
+     * subscribers handles both paths.
+     */
+    public function save(Review $review): bool
+    {
+        $isNew = !$review->id;
+        $wasApproved = $isNew ? false : (bool) $review->approved;
+
+        if ($review->authorEmail) {
+            $review->authorEmailHash = hash('sha256', strtolower(trim($review->authorEmail)));
+            if (!$review->authorUserId) {
+                $this->matchAuthorToUser($review);
+            }
+        } else {
+            $review->authorEmailHash = null;
+        }
+
+        if (!Craft::$app->getElements()->saveElement($review)) {
+            return false;
+        }
+
+        $source = $review->getSource();
+        if ($source) {
+            $this->trigger(self::EVENT_AFTER_SYNC_REVIEW, new ReviewSyncEvent(
+                review: $review,
+                source: $source,
+                isNew: $isNew,
+            ));
+
+            if ($review->approved && !$wasApproved) {
+                $this->trigger(self::EVENT_AFTER_APPROVE_REVIEW, new ReviewApprovalEvent(
+                    review: $review,
+                    source: $source,
+                    auto: $isNew,
+                ));
+            }
+        }
+
+        return true;
+    }
+
+    public function delete(Review $review): bool
+    {
+        return (bool) Craft::$app->getElements()->deleteElement($review);
     }
 
     /**

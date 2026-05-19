@@ -25,3 +25,9 @@
 - `Reviews::approve()` service method — manual approval now flows through the service so the event fires consistently from both paths.
 - Twig variable `craft.vouch.*` with `reviews()` (chainable query), `sources()`, `source(handle)`, `providers()`, `averageRating(sourceId?)`, and `pluginName()`.
 - GraphQL type `VouchReview` and two queries: `vouchReviews` (filterable: sourceId, rating/minRating, approved, authorUserId, relatedElementId, limit, offset) and `vouchReview(id)`. Defaults to `approved: true` on the public surface to prevent pending-moderation reviews leaking.
+- Manual reviews: a `ManualConnector` provider type, CP "New review" form on the reviews index, full edit form with delete action, and an `Approved` toggle. Existing reviews from API sources show a "will be overwritten on next sync" warning when edited.
+- Front-end review submission: anonymous `vouch/reviews/submit` controller action accepts customer reviews into a Manual source. Front-end forms can't write into API-backed sources (Trustpilot etc.) — that would bypass the provider's own moderation.
+- `Reviews::save()`, `Reviews::delete()`, `Reviews::newManualReview()` — manual creates flow through the service, fire the same `EVENT_AFTER_SYNC_REVIEW` / `EVENT_AFTER_APPROVE_REVIEW` as synced reviews.
+
+### Fixed
+- Reviews index now extends `_layouts/elementindex` so the source-list sidebar renders to the left of the table (was rendering inline above the search bar).

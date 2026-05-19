@@ -4,6 +4,7 @@ namespace bymayo\vouch;
 
 use bymayo\vouch\connectors\feefo\FeefoConnector;
 use bymayo\vouch\connectors\google\GoogleConnector;
+use bymayo\vouch\connectors\manual\ManualConnector;
 use bymayo\vouch\connectors\reviewsio\ReviewsioConnector;
 use bymayo\vouch\connectors\trustpilot\TrustpilotConnector;
 use bymayo\vouch\elements\Review;
@@ -284,6 +285,7 @@ class Vouch extends Plugin
             ProviderRegistry::class,
             ProviderRegistry::EVENT_REGISTER_PROVIDERS,
             function(RegisterProvidersEvent $event) {
+                $event->types[] = ManualConnector::class;
                 $event->types[] = GoogleConnector::class;
                 $event->types[] = TrustpilotConnector::class;
                 $event->types[] = FeefoConnector::class;
@@ -306,7 +308,10 @@ class Vouch extends Plugin
                 $event->rules['vouch'] = 'vouch/reviews/index';
 
                 $event->rules['vouch/reviews'] = 'vouch/reviews/index';
+                $event->rules['vouch/reviews/new'] = 'vouch/reviews/edit';
                 $event->rules['vouch/reviews/<reviewId:\d+>'] = 'vouch/reviews/edit';
+                $event->rules['POST vouch/reviews/save'] = 'vouch/reviews/save';
+                $event->rules['POST vouch/reviews/delete'] = 'vouch/reviews/delete';
                 $event->rules['POST vouch/reviews/approve'] = 'vouch/reviews/approve';
 
                 $event->rules['vouch/sources'] = 'vouch/sources/index';

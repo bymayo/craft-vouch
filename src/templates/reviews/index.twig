@@ -7,3 +7,11 @@
 {% set crumbs = [
     { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
 ] %}
+
+{% block actionButton %}
+    {% if currentUser.can('vouch-createReviews') %}
+        <a href="{{ url('vouch/reviews/new') }}" class="btn submit add icon">
+            {{ 'New review'|t('vouch') }}
+        </a>
+    {% endif %}
+{% endblock %}
