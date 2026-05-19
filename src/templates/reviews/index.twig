@@ -1,0 +1,17 @@
+{% extends '_layouts/cp' %}
+
+{% set title = 'Reviews'|t('vouch') %}
+{% set selectedSubnavItem = 'reviews' %}
+
+{% set crumbs = [
+    { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
+] %}
+
+{% set elementType = 'bymayo\\vouch\\elements\\Review' %}
+
+{% block content %}
+    {{ elementIndex(elementType, {
+        context: 'index',
+        storageKey: 'vouch:reviews',
+    }) }}
+{% endblock %}

@@ -1,0 +1,47 @@
+{
+  "name": "bymayo/vouch",
+  "description": "Pull and manage reviews from Google, Trustpilot, Feefo and Reviews.io in Craft CMS",
+  "version": "5.0.0",
+  "type": "craft-plugin",
+  "license": "proprietary",
+  "support": {
+    "email": "jason@bymayo.co.uk",
+    "issues": "https://github.com/bymayo/craft-vouch/issues?state=open",
+    "source": "https://github.com/bymayo/craft-vouch",
+    "docs": "https://github.com/bymayo/craft-vouch",
+    "rss": "https://github.com/bymayo/craft-vouch/releases.atom"
+  },
+  "require": {
+    "php": ">=8.2",
+    "craftcms/cms": "^5.6.0"
+  },
+  "suggest": {
+    "bymayo/craft-points": "Award loyalty points when a review is synced or approved via the Points trigger contract."
+  },
+  "require-dev": {
+    "craftcms/phpstan": "dev-main"
+  },
+  "autoload": {
+    "psr-4": {
+      "bymayo\\vouch\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "vouch",
+    "name": "Vouch",
+    "developer": "ByMayo",
+    "documentationUrl": "https://github.com/bymayo/craft-vouch",
+    "changelogUrl": "https://raw.githubusercontent.com/bymayo/craft-vouch/main/CHANGELOG.md",
+    "class": "bymayo\\vouch\\Vouch"
+  },
+  "config": {
+    "sort-packages": true,
+    "platform": {
+      "php": "8.2"
+    },
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true,
+      "craftcms/plugin-installer": true
+    }
+  }
+}

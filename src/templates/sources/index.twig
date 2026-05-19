@@ -1,0 +1,89 @@
+{# @var plugin \bymayo\vouch\Vouch #}
+{# @var sources \bymayo\vouch\models\Source[] #}
+{# @var providers \bymayo\vouch\connectors\ConnectorInterface[] #}
+
+{% extends '_layouts/cp' %}
+
+{% set title = 'Sources'|t('vouch') %}
+{% set selectedSubnavItem = 'sources' %}
+
+{% set crumbs = [
+    { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
+] %}
+
+{% block actionButton %}
+    {% if providers|length %}
+        <a href="{{ url('vouch/sources/new') }}" class="btn submit add icon">
+            {{ 'New source'|t('vouch') }}
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+    {% if providers|length == 0 %}
+        <div class="zilch">
+            <p>{{ 'No provider connectors are registered yet.'|t('vouch') }}</p>
+            <p class="light">{{ 'Connectors land in Phase 2 (Google Reviews) and Phase 3 (Trustpilot, Feefo, Reviews.io).'|t('vouch') }}</p>
+        </div>
+    {% elseif sources|length == 0 %}
+        <div class="zilch">
+            <p>{{ 'No sources yet — connect a provider to start pulling reviews.'|t('vouch') }}</p>
+            <a href="{{ url('vouch/sources/new') }}" class="btn submit add icon">
+                {{ 'New source'|t('vouch') }}
+            </a>
+        </div>
+    {% else %}
+        <table class="data fullwidth collapsible">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'Name'|t('vouch') }}</th>
+                    <th scope="col">{{ 'Provider'|t('vouch') }}</th>
+                    <th scope="col">{{ 'Status'|t('vouch') }}</th>
+                    <th scope="col">{{ 'Last synced'|t('vouch') }}</th>
+                    <th scope="col" class="thin"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for source in sources %}
+                    {% set connector = providers[source.providerHandle] ?? null %}
+                    <tr data-id="{{ source.id }}">
+                        <th scope="row">
+                            <a href="{{ url('vouch/sources/' ~ source.id) }}">{{ source.name }}</a>
+                            <div class="light code">{{ source.handle }}</div>
+                        </th>
+                        <td>
+                            {{ connector ? connector.displayName() : source.providerHandle }}
+                        </td>
+                        <td>
+                            {% if source.enabled %}
+                                <span class="status green"></span>{{ 'Enabled'|t('vouch') }}
+                            {% else %}
+                                <span class="status"></span>{{ 'Disabled'|t('vouch') }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if source.lastSyncedAt %}
+                                {{ source.lastSyncedAt|datetime('short') }}
+                                {% if source.lastSyncStatus %}
+                                    <div class="light">{{ source.lastSyncStatus }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="light">{{ 'Never'|t('vouch') }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="thin">
+                            <a class="delete icon" title="{{ 'Delete'|t('vouch') }}"
+                               role="button"
+                               data-action="vouch/sources/delete"
+                               data-confirm="{{ 'Delete this source? Reviews already pulled in will remain.'|t('vouch') }}"
+                               data-param="sourceId"
+                               data-value="{{ source.id }}"></a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+{% endblock %}

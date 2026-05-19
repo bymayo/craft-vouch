@@ -1,0 +1,45 @@
+{# @var review \bymayo\vouch\elements\Review #}
+
+{% extends '_layouts/cp' %}
+
+{% set title = review.getUiLabel() %}
+{% set selectedSubnavItem = 'reviews' %}
+
+{% set crumbs = [
+    { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
+    { label: 'Reviews'|t('vouch'), url: url('vouch/reviews') },
+] %}
+
+{% block content %}
+    <div class="readable">
+        <h2>{{ review.title ?: 'Untitled review'|t('vouch') }}</h2>
+
+        <p class="light">
+            {{ review.authorName ?: 'Anonymous'|t('vouch') }}
+            {% if review.getAuthorUser() %}
+                — <a href="{{ review.getAuthorUser().cpEditUrl }}">{{ review.getAuthorUser() }}</a>
+            {% endif %}
+            ·
+            {{ review.rating }}★
+            {% if review.reviewedAt %}· {{ review.reviewedAt|datetime('short') }}{% endif %}
+        </p>
+
+        {% if review.body %}
+            <blockquote>{{ review.body|nl2br }}</blockquote>
+        {% endif %}
+
+        {% if review.response %}
+            <h3>{{ 'Business reply'|t('vouch') }}</h3>
+            <blockquote>{{ review.response|nl2br }}</blockquote>
+        {% endif %}
+
+        {% if not review.approved %}
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                <input type="hidden" name="action" value="vouch/reviews/approve">
+                <input type="hidden" name="reviewId" value="{{ review.id }}">
+                <button type="submit" class="btn submit">{{ 'Approve'|t('vouch') }}</button>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

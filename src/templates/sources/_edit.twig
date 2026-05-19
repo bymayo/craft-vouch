@@ -1,0 +1,176 @@
+{# @var source \bymayo\vouch\models\Source #}
+{# @var connector \bymayo\vouch\connectors\ConnectorInterface #}
+{# @var schema array #}
+
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set fullPageForm = true %}
+{% set title = source.id ? source.name : 'New {provider} source'|t('vouch', { provider: connector.displayName() }) %}
+{% set selectedSubnavItem = 'sources' %}
+
+{% set crumbs = [
+    { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
+    { label: 'Sources'|t('vouch'), url: url('vouch/sources') },
+] %}
+
+{% block content %}
+    <input type="hidden" name="action" value="vouch/sources/save">
+    {{ redirectInput('vouch/sources') }}
+    {% if source.id %}
+        <input type="hidden" name="sourceId" value="{{ source.id }}">
+    {% endif %}
+    <input type="hidden" name="providerHandle" value="{{ source.providerHandle }}">
+
+    {{ forms.textField({
+        first: true,
+        label: 'Name'|t('vouch'),
+        instructions: 'A human label shown in the CP — e.g. “Manchester store on Google”.'|t('vouch'),
+        id: 'name',
+        name: 'name',
+        value: source.name,
+        required: true,
+        errors: source.getErrors('name'),
+    }) }}
+
+    {{ forms.autosuggestField({
+        label: 'Handle'|t('vouch'),
+        instructions: 'Used in Twig and code to reference this source.'|t('vouch'),
+        id: 'handle',
+        name: 'handle',
+        value: source.handle,
+        required: true,
+        class: 'code',
+        suggestEnvVars: false,
+        errors: source.getErrors('handle'),
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Enabled'|t('vouch'),
+        instructions: 'Disabled sources are skipped during scheduled syncs.'|t('vouch'),
+        id: 'enabled',
+        name: 'enabled',
+        on: source.enabled,
+    }) }}
+
+    {% if schema|length %}
+        <hr>
+        <h2>{{ '{provider} connection'|t('vouch', { provider: connector.displayName() }) }}</h2>
+
+        {% for field in schema %}
+            {% set isSecret = field.secret ?? false %}
+            {% set group = isSecret ? 'credentials' : 'settings' %}
+            {% set currentValue = isSecret ? '' : (source.settings[field.handle] ?? field.default ?? '') %}
+
+            {{ forms.textField({
+                label: field.label,
+                instructions: field.instructions ?? null,
+                id: group ~ '-' ~ field.handle,
+                name: group ~ '[' ~ field.handle ~ ']',
+                value: currentValue,
+                required: field.required ?? false,
+                type: isSecret ? 'password' : (field.type ?? 'text'),
+                placeholder: isSecret and source.credentials[field.handle] is defined and source.credentials[field.handle]
+                    ? '••••••••'|t('vouch')
+                    : (field.placeholder ?? null),
+            }) }}
+        {% endfor %}
+    {% endif %}
+
+    <hr>
+    <h2>{{ 'Moderation'|t('vouch') }}</h2>
+
+    {{ forms.lightswitchField({
+        label: 'Require manual approval'|t('vouch'),
+        instructions: 'When on, synced reviews land as Pending until approved by an admin.'|t('vouch'),
+        id: 'requiresApproval',
+        name: 'requiresApproval',
+        on: source.requiresApproval,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Auto-approve threshold'|t('vouch'),
+        instructions: 'Optional. With approval on, reviews at or above this rating (0–5) are auto-approved.'|t('vouch'),
+        id: 'minRating',
+        name: 'minRating',
+        value: source.minRating,
+        type: 'number',
+        size: 5,
+    }) }}
+
+    <hr>
+    <h2>{{ 'Sync'|t('vouch') }}</h2>
+
+    {{ forms.textField({
+        label: 'Backfill window (days)'|t('vouch'),
+        instructions: 'On first sync, fetch reviews from up to this many days ago. Use 0 for all-time.'|t('vouch'),
+        id: 'backfillDays',
+        name: 'backfillDays',
+        value: source.backfillDays,
+        type: 'number',
+        size: 5,
+    }) }}
+
+    {% if source.id %}
+        <hr>
+        <h2>{{ 'Connection'|t('vouch') }}</h2>
+
+        <div class="flex" style="gap:.5em; align-items:center; margin-bottom:1em;">
+            <button type="button" class="btn" id="vouch-test-btn">{{ 'Test connection'|t('vouch') }}</button>
+            <button type="button" class="btn submit" id="vouch-sync-btn">{{ 'Sync now'|t('vouch') }}</button>
+            <span id="vouch-conn-status" class="light"></span>
+        </div>
+
+        {% if source.lastSyncedAt %}
+            <p class="light">
+                {{ 'Last synced {when} ({status}).'|t('vouch', {
+                    when: source.lastSyncedAt|datetime('short'),
+                    status: source.lastSyncStatus ?: 'unknown',
+                }) }}
+                {% if source.lastSyncError %}
+                    <span class="error">{{ source.lastSyncError }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
+
+        {% js %}
+            (function() {
+                const sourceId = {{ source.id }};
+                const csrfName = '{{ craft.app.config.general.csrfTokenName|e('js') }}';
+                const csrfValue = '{{ craft.app.request.csrfToken|e('js') }}';
+                const status = document.getElementById('vouch-conn-status');
+
+                function post(action, parse) {
+                    const body = new FormData();
+                    body.append(csrfName, csrfValue);
+                    body.append('sourceId', sourceId);
+                    status.textContent = '{{ 'Working…'|t('vouch')|e('js') }}';
+                    return fetch(Craft.getActionUrl(action), {
+                        method: 'POST',
+                        body: body,
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    }).then(r => r.json()).then(parse).catch(e => {
+                        status.textContent = e.message || '{{ 'Request failed.'|t('vouch')|e('js') }}';
+                    });
+                }
+
+                document.getElementById('vouch-test-btn').addEventListener('click', function() {
+                    post('vouch/sources/test', function(json) {
+                        status.textContent = json.message || '';
+                        status.className = json.ok ? '' : 'error';
+                    });
+                });
+
+                document.getElementById('vouch-sync-btn').addEventListener('click', function() {
+                    post('vouch/sources/sync', function(json) {
+                        status.textContent = json.message || '';
+                        status.className = json.ok ? '' : 'error';
+                        if (json.ok && (json.created || json.updated)) {
+                            setTimeout(() => location.reload(), 600);
+                        }
+                    });
+                });
+            })();
+        {% endjs %}
+    {% endif %}
+{% endblock %}

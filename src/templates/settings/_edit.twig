@@ -1,0 +1,58 @@
+{# @var settings \bymayo\vouch\models\Settings #}
+
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set fullPageForm = true %}
+{% set title = 'Settings'|t('vouch') %}
+{% set selectedSubnavItem = 'settings' %}
+
+{% set crumbs = [
+    { label: settings.pluginName, url: url('vouch') },
+] %}
+
+{% block content %}
+    <input type="hidden" name="action" value="vouch/settings/save">
+    {{ redirectInput('vouch/settings') }}
+
+    {{ forms.textField({
+        first: true,
+        label: 'Plugin name'|t('vouch'),
+        instructions: 'Shown in the CP nav.'|t('vouch'),
+        id: 'pluginName',
+        name: 'settings[pluginName]',
+        value: settings.pluginName,
+        required: true,
+        errors: settings.getErrors('pluginName'),
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Match reviewers to Craft users'|t('vouch'),
+        instructions: 'When on, the reviewer email is matched against existing Craft users so the Points integration has someone to award.'|t('vouch'),
+        id: 'matchAuthorsToUsers',
+        name: 'settings[matchAuthorsToUsers]',
+        on: settings.matchAuthorsToUsers,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Email retention (days)'|t('vouch'),
+        instructions: 'How long to keep reviewer emails. After this, the email is purged but the hash stays so user matching still works. 0 = never purge.'|t('vouch'),
+        id: 'emailRetentionDays',
+        name: 'settings[emailRetentionDays]',
+        value: settings.emailRetentionDays,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('emailRetentionDays'),
+    }) }}
+
+    {{ forms.textField({
+        label: 'Default backfill (days)'|t('vouch'),
+        instructions: 'Default backfill window applied to new sources. Per-source overrides win.'|t('vouch'),
+        id: 'defaultBackfillDays',
+        name: 'settings[defaultBackfillDays]',
+        value: settings.defaultBackfillDays,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('defaultBackfillDays'),
+    }) }}
+{% endblock %}
