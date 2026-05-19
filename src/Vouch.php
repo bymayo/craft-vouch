@@ -8,23 +8,30 @@ use bymayo\vouch\connectors\reviewsio\ReviewsioConnector;
 use bymayo\vouch\connectors\trustpilot\TrustpilotConnector;
 use bymayo\vouch\elements\Review;
 use bymayo\vouch\events\RegisterProvidersEvent;
+use bymayo\vouch\gql\types\ReviewType;
 use bymayo\vouch\models\Settings;
 use bymayo\vouch\services\ProviderRegistry;
 use bymayo\vouch\services\Reviews;
 use bymayo\vouch\services\Sources;
 use bymayo\vouch\services\Sync;
+use bymayo\vouch\variables\VouchVariable;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
 use craft\db\Query;
 use craft\events\RegisterComponentTypesEvent;
+use craft\events\RegisterGqlQueriesEvent;
+use craft\events\RegisterGqlTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\services\Elements;
+use craft\services\Gql;
 use craft\services\UserPermissions;
+use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
+use GraphQL\Type\Definition\Type;
 use yii\base\Event;
 
 /**
@@ -61,6 +68,13 @@ class Vouch extends Plugin
     public function init(): void
     {
         parent::init();
+
+        // Route console traffic at our own console controllers so
+        // `craft vouch/sync/*` works.
+        if (Craft::$app->getRequest()->getIsConsoleRequest()) {
+            $this->controllerNamespace = 'bymayo\\vouch\\console\\controllers';
+        }
+
         $this->attachEventHandlers();
     }
 
@@ -187,6 +201,81 @@ class Vouch extends Plugin
         );
     }
 
+    private function registerGraphQl(): void
+    {
+        Event::on(
+            Gql::class,
+            Gql::EVENT_REGISTER_GQL_TYPES,
+            function(RegisterGqlTypesEvent $event) {
+                $event->types[] = ReviewType::class;
+            }
+        );
+
+        Event::on(
+            Gql::class,
+            Gql::EVENT_REGISTER_GQL_QUERIES,
+            function(RegisterGqlQueriesEvent $event) {
+                $event->queries['vouchReviews'] = [
+                    'type' => Type::listOf(ReviewType::getType()),
+                    'args' => [
+                        'sourceId' => Type::int(),
+                        'rating' => Type::float(),
+                        'minRating' => Type::float(),
+                        'approved' => Type::boolean(),
+                        'authorUserId' => Type::int(),
+                        'relatedElementId' => Type::int(),
+                        'limit' => Type::int(),
+                        'offset' => Type::int(),
+                    ],
+                    'description' => 'Reviews pulled in by Vouch.',
+                    'resolve' => function($source, array $args) {
+                        $query = \bymayo\vouch\elements\Review::find()
+                            ->orderBy(['vouch_reviews.reviewedAt' => SORT_DESC]);
+
+                        // Default approved=true on the public GQL surface so
+                        // pending-moderation reviews don't leak into front-end
+                        // queries unless the caller explicitly opts in.
+                        $query->approved($args['approved'] ?? true);
+
+                        if (isset($args['sourceId'])) {
+                            $query->sourceId((int)$args['sourceId']);
+                        }
+                        if (isset($args['rating'])) {
+                            $query->rating((float)$args['rating']);
+                        }
+                        if (isset($args['minRating'])) {
+                            $query->rating('>= ' . (float)$args['minRating']);
+                        }
+                        if (isset($args['authorUserId'])) {
+                            $query->authorUserId((int)$args['authorUserId']);
+                        }
+                        if (isset($args['relatedElementId'])) {
+                            $query->relatedElementId((int)$args['relatedElementId']);
+                        }
+                        if (isset($args['limit'])) {
+                            $query->limit((int)$args['limit']);
+                        }
+                        if (isset($args['offset'])) {
+                            $query->offset((int)$args['offset']);
+                        }
+                        return $query->all();
+                    },
+                ];
+
+                $event->queries['vouchReview'] = [
+                    'type' => ReviewType::getType(),
+                    'args' => ['id' => Type::nonNull(Type::int())],
+                    'resolve' => fn($source, array $args) =>
+                        \bymayo\vouch\elements\Review::find()
+                            ->id((int)$args['id'])
+                            ->status(null)
+                            ->one(),
+                    'description' => 'A single Vouch review by id.',
+                ];
+            }
+        );
+    }
+
     private function attachEventHandlers(): void
     {
         // Register Vouch's own built-in connectors. Third-party providers
@@ -233,6 +322,18 @@ class Vouch extends Plugin
                 $event->rules['POST vouch/settings'] = 'vouch/settings/save';
             }
         );
+
+        Event::on(
+            CraftVariable::class,
+            CraftVariable::EVENT_INIT,
+            function(Event $event) {
+                /** @var CraftVariable $variable */
+                $variable = $event->sender;
+                $variable->set('vouch', VouchVariable::class);
+            }
+        );
+
+        $this->registerGraphQl();
 
         Event::on(
             UserPermissions::class,

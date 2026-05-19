@@ -4,6 +4,8 @@ namespace bymayo\vouch\services;
 
 use bymayo\vouch\connectors\FetchedReview;
 use bymayo\vouch\elements\Review;
+use bymayo\vouch\events\ReviewApprovalEvent;
+use bymayo\vouch\events\ReviewSyncEvent;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\Vouch;
 use Craft;
@@ -20,6 +22,15 @@ use yii\base\Component;
  */
 class Reviews extends Component
 {
+    /** Fired after every successful upsert from a `FetchedReview`. */
+    public const EVENT_AFTER_SYNC_REVIEW = 'afterSyncReview';
+
+    /**
+     * Fired the first time a review becomes approved — once per review,
+     * never re-fires on re-sync.
+     */
+    public const EVENT_AFTER_APPROVE_REVIEW = 'afterApproveReview';
+
     /**
      * Find an existing Review by `(sourceId, externalId)`. Returns null if
      * this is the first time we've seen the provider's review id.
@@ -46,6 +57,9 @@ class Reviews extends Component
             ?? new Review();
 
         $isNew = !$review->id;
+        // Track approval transition so we can fire the approval event below.
+        // Manual re-syncs of an already-approved review must NOT re-fire it.
+        $wasApproved = $isNew ? false : (bool) $review->approved;
 
         $review->sourceId = $source->id;
         $review->externalId = $fetched->externalId;
@@ -76,7 +90,52 @@ class Reviews extends Component
             return null;
         }
 
+        $this->trigger(self::EVENT_AFTER_SYNC_REVIEW, new ReviewSyncEvent(
+            review: $review,
+            source: $source,
+            isNew: $isNew,
+        ));
+
+        // Approval transition: either a brand-new review that landed
+        // already-approved (auto-approve path), or a previously-pending
+        // review whose moderation rules now resolve to approved on re-sync.
+        if ($review->approved && !$wasApproved) {
+            $this->trigger(self::EVENT_AFTER_APPROVE_REVIEW, new ReviewApprovalEvent(
+                review: $review,
+                source: $source,
+                auto: true,
+            ));
+        }
+
         return $review;
+    }
+
+    /**
+     * Manually approve a review (the CP "Approve" button calls this). Fires
+     * `EVENT_AFTER_APPROVE_REVIEW` with `auto=false` when the review wasn't
+     * already approved.
+     */
+    public function approve(Review $review): bool
+    {
+        $wasApproved = (bool) $review->approved;
+        $review->approved = true;
+
+        if (!Craft::$app->getElements()->saveElement($review)) {
+            return false;
+        }
+
+        if (!$wasApproved) {
+            $source = $review->getSource();
+            if ($source) {
+                $this->trigger(self::EVENT_AFTER_APPROVE_REVIEW, new ReviewApprovalEvent(
+                    review: $review,
+                    source: $source,
+                    auto: false,
+                ));
+            }
+        }
+
+        return true;
     }
 
     /**

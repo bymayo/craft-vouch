@@ -3,6 +3,7 @@
 namespace bymayo\vouch\controllers;
 
 use bymayo\vouch\elements\Review;
+use bymayo\vouch\Vouch;
 use Craft;
 use craft\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -44,8 +45,7 @@ class ReviewsController extends Controller
             throw new NotFoundHttpException();
         }
 
-        $review->approved = true;
-        Craft::$app->getElements()->saveElement($review);
+        Vouch::getInstance()->reviews->approve($review);
 
         Craft::$app->getSession()->setNotice(Craft::t('vouch', 'Review approved.'));
         return $this->redirectToPostedUrl($review);

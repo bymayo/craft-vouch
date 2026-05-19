@@ -2,6 +2,8 @@
 
 namespace bymayo\vouch\services;
 
+use bymayo\vouch\events\SourceSyncEvent;
+use bymayo\vouch\jobs\SyncSourceJob;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\records\SourceRecord;
 use bymayo\vouch\Vouch;
@@ -19,6 +21,106 @@ use yii\base\Component;
  */
 class Sync extends Component
 {
+    public const INTERVAL_MANUAL = 'manual';
+    public const INTERVAL_HOURLY = 'hourly';
+    public const INTERVAL_DAILY = 'daily';
+
+    /**
+     * Fired before a source sync begins. Listeners can set
+     * `$event->cancelled = true` to skip the run.
+     */
+    public const EVENT_BEFORE_SOURCE_SYNC = 'beforeSourceSync';
+
+    /** Fired after a source sync finishes, success or failure. */
+    public const EVENT_AFTER_SOURCE_SYNC = 'afterSourceSync';
+
+    /**
+     * Push a `SyncSourceJob` onto Craft's queue. Returns the job id, or null
+     * if the source was rejected (disabled / missing).
+     */
+    public function queue(Source $source): ?string
+    {
+        if (!$source->enabled) {
+            return null;
+        }
+
+        return Craft::$app->getQueue()->push(new SyncSourceJob([
+            'sourceId' => $source->id,
+        ]));
+    }
+
+    /**
+     * Queue jobs for every enabled source whose schedule says it's due now.
+     * Intended to be called from cron via `vouch/sync/due`.
+     *
+     * @return int Number of jobs queued.
+     */
+    public function queueAllDue(): int
+    {
+        $count = 0;
+        foreach (Vouch::getInstance()->sources->getAllSources() as $source) {
+            if (!$source->enabled) {
+                continue;
+            }
+            if (!$this->isDue($source)) {
+                continue;
+            }
+            if ($this->queue($source) !== null) {
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Should this source be re-synced now, given its configured interval and
+     * the last successful sync timestamp? Sources with `manual` (or an empty
+     * interval) are never due — they only sync via the CP button or an
+     * explicit console call.
+     */
+    public function isDue(Source $source): bool
+    {
+        $interval = $source->syncInterval ?: self::INTERVAL_MANUAL;
+        if ($interval === self::INTERVAL_MANUAL) {
+            return false;
+        }
+
+        // No prior sync at all → due immediately.
+        if (!$source->lastSyncedAt) {
+            return true;
+        }
+
+        $now = new \DateTime();
+        $elapsed = $now->getTimestamp() - $source->lastSyncedAt->getTimestamp();
+
+        switch ($interval) {
+            case self::INTERVAL_HOURLY:
+                return $elapsed >= 3600;
+            case self::INTERVAL_DAILY:
+                return $elapsed >= 86400;
+        }
+
+        // Anything else is treated as a cron expression. Fall back to "due"
+        // if parsing fails so a typo doesn't silently stop a source from
+        // ever syncing — better to over-sync than to go quiet.
+        return $this->isCronDue($interval, $source->lastSyncedAt);
+    }
+
+    private function isCronDue(string $expression, \DateTime $lastSync): bool
+    {
+        if (!class_exists(\Cron\CronExpression::class)) {
+            return true;
+        }
+
+        try {
+            $cron = new \Cron\CronExpression($expression);
+            $nextAfterLast = $cron->getNextRunDate($lastSync);
+            return $nextAfterLast <= new \DateTime();
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
     /**
      * Run a full sync for `$source`. Returns a result summary the caller can
      * surface in the CP / console output.
@@ -36,6 +138,12 @@ class Sync extends Component
 
         if (!$source->enabled) {
             return $this->finish($source, SyncResult::skipped('Source is disabled.'));
+        }
+
+        $before = new SourceSyncEvent(source: $source);
+        $this->trigger(self::EVENT_BEFORE_SOURCE_SYNC, $before);
+        if ($before->cancelled) {
+            return $this->finish($source, SyncResult::skipped('Sync cancelled by event listener.'));
         }
 
         // Backfill cursor: first sync of a source honours the user's chosen
@@ -116,6 +224,11 @@ class Sync extends Component
             sprintf('Vouch sync (%s): %s', $source->handle, $result->message),
             'vouch',
         );
+
+        $this->trigger(self::EVENT_AFTER_SOURCE_SYNC, new SourceSyncEvent(
+            source: $source,
+            result: $result,
+        ));
 
         return $result;
     }

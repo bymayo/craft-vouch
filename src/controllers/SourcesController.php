@@ -96,6 +96,8 @@ class SourcesController extends Controller
         $minRating = $request->getBodyParam('minRating');
         $source->minRating = $minRating !== '' && $minRating !== null ? (float) $minRating : null;
         $source->backfillDays = (int) $request->getBodyParam('backfillDays', $source->backfillDays ?: 90);
+        $syncInterval = $request->getBodyParam('syncInterval');
+        $source->syncInterval = is_string($syncInterval) && $syncInterval !== '' ? $syncInterval : null;
 
         if (!$vouch->sources->saveSource($source)) {
             Craft::$app->getSession()->setError(Craft::t('vouch', 'Couldn’t save source.'));

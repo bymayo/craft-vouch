@@ -40,6 +40,7 @@
                     <th scope="col">{{ 'Name'|t('vouch') }}</th>
                     <th scope="col">{{ 'Provider'|t('vouch') }}</th>
                     <th scope="col">{{ 'Status'|t('vouch') }}</th>
+                    <th scope="col">{{ 'Schedule'|t('vouch') }}</th>
                     <th scope="col">{{ 'Last synced'|t('vouch') }}</th>
                     <th scope="col" class="thin"></th>
                 </tr>
@@ -61,6 +62,9 @@
                             {% else %}
                                 <span class="status"></span>{{ 'Disabled'|t('vouch') }}
                             {% endif %}
+                        </td>
+                        <td>
+                            <span class="light">{{ (source.syncInterval ?: 'manual')|t('vouch')|capitalize }}</span>
                         </td>
                         <td>
                             {% if source.lastSyncedAt %}

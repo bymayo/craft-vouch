@@ -101,6 +101,19 @@
     <hr>
     <h2>{{ 'Sync'|t('vouch') }}</h2>
 
+    {{ forms.selectField({
+        label: 'Sync schedule'|t('vouch'),
+        instructions: 'How often this source should auto-sync. “Manual” means it only syncs when triggered. Anything cron-like requires an external cron pointed at `craft vouch/sync/due`.'|t('vouch'),
+        id: 'syncInterval',
+        name: 'syncInterval',
+        value: source.syncInterval ?: 'manual',
+        options: {
+            manual: 'Manual only'|t('vouch'),
+            hourly: 'Hourly'|t('vouch'),
+            daily: 'Daily'|t('vouch'),
+        },
+    }) }}
+
     {{ forms.textField({
         label: 'Backfill window (days)'|t('vouch'),
         instructions: 'On first sync, fetch reviews from up to this many days ago. Use 0 for all-time.'|t('vouch'),
