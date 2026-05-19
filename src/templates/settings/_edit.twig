@@ -18,7 +18,6 @@
     {{ forms.textField({
         first: true,
         label: 'Plugin name'|t('vouch'),
-        instructions: 'Shown in the CP nav.'|t('vouch'),
         id: 'pluginName',
         name: 'settings[pluginName]',
         value: settings.pluginName,
@@ -27,8 +26,8 @@
     }) }}
 
     {{ forms.lightswitchField({
-        label: 'Match reviewers to Craft users'|t('vouch'),
-        instructions: 'When on, the reviewer email is matched against existing Craft users so the Points integration has someone to award.'|t('vouch'),
+        label: 'Author matching'|t('vouch'),
+        instructions: 'Match reviewers to Craft users by email.'|t('vouch'),
         id: 'matchAuthorsToUsers',
         name: 'settings[matchAuthorsToUsers]',
         on: settings.matchAuthorsToUsers,
@@ -36,7 +35,7 @@
 
     {{ forms.textField({
         label: 'Auto-approve threshold'|t('vouch'),
-        instructions: 'For sources where “Require manual approval” is on, reviews at or above this rating (0–5) skip the queue. Default 5 means only perfect-score reviews are auto-approved.'|t('vouch'),
+        instructions: 'Reviews at or above this rating are auto-approved.'|t('vouch'),
         id: 'autoApproveThreshold',
         name: 'settings[autoApproveThreshold]',
         value: settings.autoApproveThreshold,
@@ -47,7 +46,7 @@
 
     {{ forms.textField({
         label: 'Email retention (days)'|t('vouch'),
-        instructions: 'How long to keep reviewer emails. After this, the email is purged but the hash stays so user matching still works. 0 = never purge.'|t('vouch'),
+        instructions: 'Days to keep reviewer emails before purging. 0 = never.'|t('vouch'),
         id: 'emailRetentionDays',
         name: 'settings[emailRetentionDays]',
         value: settings.emailRetentionDays,
@@ -58,7 +57,7 @@
 
     {{ forms.textField({
         label: 'Backfill window (days)'|t('vouch'),
-        instructions: 'On a source’s first sync, fetch reviews from up to this many days ago. After that the last-synced timestamp drives the window. 0 = pull all history.'|t('vouch'),
+        instructions: 'Days of history to pull on a source’s first sync. 0 = all.'|t('vouch'),
         id: 'backfillDays',
         name: 'settings[backfillDays]',
         value: settings.backfillDays,

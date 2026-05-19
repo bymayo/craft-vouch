@@ -93,9 +93,8 @@ class Vouch extends Plugin
         if ($user->checkPermission('vouch-viewSources')) {
             $subnav['sources'] = ['label' => Craft::t('vouch', 'Sources'), 'url' => 'vouch/sources'];
         }
-        if ($user->checkPermission('vouch-manageSettings')) {
-            $subnav['settings'] = ['label' => Craft::t('vouch', 'Settings'), 'url' => 'vouch/settings'];
-        }
+        // Settings intentionally omitted from this subnav — managed via
+        // Settings → Plugins → Vouch (or project.yaml / config/vouch.php).
 
         if (empty($subnav)) {
             return null;
@@ -111,88 +110,25 @@ class Vouch extends Plugin
         return file_exists($path) ? $path : parent::cpNavIconPath();
     }
 
-    /**
-     * Settings live in `{{%vouch_settings}}`, not Project Config — admins can
-     * change branding/operational values on a production environment without
-     * a deploy clobbering them, and there's no cross-environment yaml drift.
-     *
-     * Devs can still override per-environment via `config/vouch.php`; values
-     * there overlay the DB row on every read.
-     */
     protected function createSettingsModel(): ?Model
     {
-        $model = Craft::createObject(Settings::class);
-
-        try {
-            $row = (new Query())
-                ->from('{{%vouch_settings}}')
-                ->where(['id' => 1])
-                ->one();
-            if ($row && !empty($row['settings'])) {
-                $data = Json::decodeIfJson($row['settings']);
-                if (is_array($data)) {
-                    $model->setAttributes($data, false);
-                }
-            }
-        } catch (\Throwable) {
-            // Pre-install / pre-migration — fall back to defaults.
-        }
-
-        $fileConfig = Craft::$app->getConfig()->getConfigFromFile('vouch');
-        if (!empty($fileConfig)) {
-            $model->setAttributes($fileConfig, false);
-        }
-
-        return $model;
+        return Craft::createObject(Settings::class);
     }
 
     /**
-     * Intentional no-op — same reasoning as the Points plugin: opting out of
-     * Project Config means the DB row is the single source of truth, so we
-     * don't want Craft overlaying `plugins.settings` values on top of it.
+     * Settings live in Project Config (and therefore project.yaml). Craft's
+     * default `setSettings()` writes the project-config values into the
+     * model; we then overlay anything from `config/vouch.php` so per-env
+     * overrides win.
      */
     public function setSettings(array $settings): void
     {
-        // no-op
-    }
+        parent::setSettings($settings);
 
-    public function saveSettings(array $settings): bool
-    {
-        $model = $this->getSettings();
-        $model->setAttributes($settings, false);
-        if (!$model->validate()) {
-            return false;
+        $fileConfig = Craft::$app->getConfig()->getConfigFromFile('vouch');
+        if (!empty($fileConfig)) {
+            $this->getSettings()?->setAttributes($fileConfig, false);
         }
-
-        $db = Craft::$app->getDb();
-        $now = (new \DateTime())->format('Y-m-d H:i:s');
-        $payload = Json::encode($settings);
-
-        $exists = (new Query())
-            ->from('{{%vouch_settings}}')
-            ->where(['id' => 1])
-            ->exists();
-
-        if ($exists) {
-            $db->createCommand()
-                ->update('{{%vouch_settings}}', [
-                    'settings' => $payload,
-                    'dateUpdated' => $now,
-                ], ['id' => 1])
-                ->execute();
-        } else {
-            $db->createCommand()
-                ->insert('{{%vouch_settings}}', [
-                    'id' => 1,
-                    'settings' => $payload,
-                    'dateCreated' => $now,
-                    'dateUpdated' => $now,
-                    'uid' => StringHelper::UUID(),
-                ])
-                ->execute();
-        }
-
-        return true;
     }
 
     public function getSettingsResponse(): mixed

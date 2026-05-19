@@ -74,14 +74,6 @@ class Install extends Migration
         $this->addForeignKey(null, '{{%vouch_reviews}}', ['authorUserId'], '{{%users}}', ['id'], 'SET NULL');
         $this->addForeignKey(null, '{{%vouch_reviews}}', ['relatedElementId'], '{{%elements}}', ['id'], 'SET NULL');
 
-        $this->createTable('{{%vouch_settings}}', [
-            'id' => $this->primaryKey(),
-            'settings' => $this->text(),
-            'dateCreated' => $this->dateTime()->notNull(),
-            'dateUpdated' => $this->dateTime()->notNull(),
-            'uid' => $this->uid(),
-        ]);
-
         return true;
     }
 
@@ -89,7 +81,6 @@ class Install extends Migration
     {
         $this->dropTableIfExists('{{%vouch_reviews}}');
         $this->dropTableIfExists('{{%vouch_sources}}');
-        $this->dropTableIfExists('{{%vouch_settings}}');
         return true;
     }
 }

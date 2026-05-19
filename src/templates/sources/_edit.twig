@@ -45,7 +45,6 @@
     {{ forms.textField({
         first: true,
         label: 'Name'|t('vouch'),
-        instructions: 'A human label shown in the CP — e.g. “Manchester store on Google”.'|t('vouch'),
         id: 'name',
         name: 'name',
         value: source.name,
@@ -56,7 +55,6 @@
 
     {{ forms.textField({
         label: 'Handle'|t('vouch'),
-        instructions: 'Used in Twig and code to reference this source.'|t('vouch'),
         id: 'handle',
         name: 'handle',
         class: 'code',
@@ -74,7 +72,6 @@
 
     {{ forms.lightswitchField({
         label: 'Enabled'|t('vouch'),
-        instructions: 'Disabled sources are skipped during scheduled syncs.'|t('vouch'),
         id: 'enabled',
         name: 'enabled',
         on: source.enabled,
@@ -82,7 +79,7 @@
 
     {% if schema|length %}
         <hr>
-        <h2>{{ '{provider} connection'|t('vouch', { provider: connector.displayName() }) }}</h2>
+        <h2>{{ 'Connection Details'|t('vouch') }}</h2>
 
         {% for field in schema %}
             {% set isSecret = field.secret ?? false %}
