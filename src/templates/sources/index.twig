@@ -11,83 +11,164 @@
     { label: craft.app.plugins.getPlugin('vouch').getSettings().pluginName, url: url('vouch') },
 ] %}
 
-{% block actionButton %}
-    {% if providers|length %}
-        <a href="{{ url('vouch/sources/new') }}" class="btn submit add icon">
-            {{ 'New source'|t('vouch') }}
-        </a>
-    {% endif %}
-{% endblock %}
+{% do view.registerAssetBundle('craft\\web\\assets\\admintable\\AdminTableAsset') %}
 
 {% block content %}
 
     {% if providers|length == 0 %}
         <div class="zilch">
             <p>{{ 'No provider connectors are registered yet.'|t('vouch') }}</p>
-            <p class="light">{{ 'Connectors land in Phase 2 (Google Reviews) and Phase 3 (Trustpilot, Feefo, Reviews.io).'|t('vouch') }}</p>
-        </div>
-    {% elseif sources|length == 0 %}
-        <div class="zilch">
-            <p>{{ 'No sources yet — connect a provider to start pulling reviews.'|t('vouch') }}</p>
-            <a href="{{ url('vouch/sources/new') }}" class="btn submit add icon">
-                {{ 'New source'|t('vouch') }}
-            </a>
         </div>
     {% else %}
-        <table class="data fullwidth collapsible">
-            <thead>
-                <tr>
-                    <th scope="col">{{ 'Name'|t('vouch') }}</th>
-                    <th scope="col">{{ 'Provider'|t('vouch') }}</th>
-                    <th scope="col">{{ 'Status'|t('vouch') }}</th>
-                    <th scope="col">{{ 'Schedule'|t('vouch') }}</th>
-                    <th scope="col">{{ 'Last synced'|t('vouch') }}</th>
-                    <th scope="col" class="thin"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for source in sources %}
-                    {% set connector = providers[source.providerHandle] ?? null %}
-                    <tr data-id="{{ source.id }}">
-                        <th scope="row">
-                            <a href="{{ url('vouch/sources/' ~ source.id) }}">{{ source.name }}</a>
-                            <div class="light code">{{ source.handle }}</div>
-                        </th>
-                        <td>
-                            {{ connector ? connector.displayName() : source.providerHandle }}
-                        </td>
-                        <td>
-                            {% if source.enabled %}
-                                <span class="status green"></span>{{ 'Enabled'|t('vouch') }}
-                            {% else %}
-                                <span class="status"></span>{{ 'Disabled'|t('vouch') }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="light">{{ (source.syncInterval ?: 'manual')|t('vouch')|capitalize }}</span>
-                        </td>
-                        <td>
-                            {% if source.lastSyncedAt %}
-                                {{ source.lastSyncedAt|datetime('short') }}
-                                {% if source.lastSyncStatus %}
-                                    <div class="light">{{ source.lastSyncStatus }}</div>
-                                {% endif %}
-                            {% else %}
-                                <span class="light">{{ 'Never'|t('vouch') }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="thin">
-                            <a class="delete icon" title="{{ 'Delete'|t('vouch') }}"
-                               role="button"
-                               data-action="vouch/sources/delete"
-                               data-confirm="{{ 'Delete this source? Reviews already pulled in will remain.'|t('vouch') }}"
-                               data-param="sourceId"
-                               data-value="{{ source.id }}"></a>
-                        </td>
-                    </tr>
+        {# Quick-add bar — one click straight to the new-source form for the
+           chosen provider. Sits above the table rather than as an action
+           button so all five providers are visible at once. #}
+        <div class="vouch-quickadd">
+            <h2>{{ 'Connect a new source'|t('vouch') }}</h2>
+            <div class="vouch-quickadd-tiles">
+                {% for handle, connector in providers %}
+                    <a href="{{ url('vouch/sources/new/' ~ handle) }}" class="vouch-quickadd-tile">
+                        {% set icon = connector.icon() %}
+                        {% if icon %}
+                            <span class="vouch-quickadd-icon">{{ icon|raw }}</span>
+                        {% endif %}
+                        <span class="vouch-quickadd-label">
+                            <span class="vouch-quickadd-name">{{ connector.displayName() }}</span>
+                        </span>
+                    </a>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2 class="vouch-existing-heading">{{ 'Existing sources'|t('vouch') }}</h2>
+
+        <div id="sources-vue-admin-table"></div>
     {% endif %}
 
+    <style>
+        .vouch-quickadd { margin-bottom: 2em; }
+        .vouch-quickadd h2 { margin: 0 0 .75em; }
+        .vouch-quickadd-tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: .6em;
+        }
+        .vouch-quickadd-tile {
+            display: flex;
+            align-items: center;
+            gap: .75em;
+            padding: .75em .9em;
+            border: 1px solid #d4d4d8;
+            border-radius: 6px;
+            background: #fff;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color .15s;
+        }
+        .vouch-quickadd-tile:hover {
+            border-color: #3D7AFF;
+            text-decoration: none;
+        }
+        .vouch-quickadd-icon {
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .vouch-quickadd-icon svg { width: 100%; height: 100%; }
+        .vouch-quickadd-label {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .vouch-quickadd-name { font-weight: 500; }
+        .vouch-existing-heading { margin: 0 0 .75em; }
+        /* Tighten the gap between the row-status dot and the title link
+           in the sources table — Craft's default margin sits a bit far. */
+        #sources-vue-admin-table .vuetable-component .status { margin-right: .35em; }
+    </style>
+
 {% endblock %}
+
+{% if providers|length %}
+    {% js %}
+        new Craft.VueAdminTable({
+            columns: [
+                { name: '__slot:title', title: Craft.t('vouch', 'Name'), sortField: false },
+                { name: '__slot:handle', title: Craft.t('vouch', 'Handle'), sortField: false },
+                { name: 'provider', title: Craft.t('vouch', 'Provider') },
+                { name: 'connection', title: Craft.t('vouch', 'Connection'), callback: (v) => v },
+                { name: 'lastSynced', title: Craft.t('vouch', 'Last synced'), callback: (v) => v },
+                { name: 'sync', title: '', callback: (v) => v },
+            ],
+            container: '#sources-vue-admin-table',
+            emptyMessage: Craft.t('vouch', 'No sources yet — pick a provider above to add one.'),
+            tableDataEndpoint: 'vouch/sources/table-data',
+            deleteAction: 'vouch/sources/delete',
+            deleteConfirmationMessage: Craft.t('vouch', 'Are you sure you want to delete this source? Reviews already pulled in will remain.'),
+            deleteSuccessMessage: Craft.t('vouch', 'Source deleted.'),
+            search: true,
+        });
+
+        // VueAdminTable renders rows after the initial DOM paint, so we
+        // can't kick off the connection checks from a one-shot init.
+        // A MutationObserver watches the table container and fires the
+        // test for any chip that hasn't been checked yet.
+        (function() {
+            var container = document.getElementById('sources-vue-admin-table');
+            if (!container) return;
+
+            function checkChip(chip) {
+                if (!chip.dataset.pending) return;
+                chip.removeAttribute('data-pending');
+
+                var dot = chip.querySelector('.status');
+                var text = chip.querySelector('.vouch-connection-text');
+
+                var body = new FormData();
+                body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                body.append('sourceId', chip.dataset.sourceId);
+
+                function setState(klass, color, label) {
+                    dot.removeAttribute('style');
+                    dot.className = 'status ' + klass;
+                    text.style.color = color;
+                    text.textContent = label;
+                }
+
+                // Compact error label on the index — the full message is
+                // shown on the source's edit page so users have somewhere
+                // to read the details without flooding the table cell.
+                var errLabel = '{{ 'Error'|t('vouch')|e('js') }}';
+
+                fetch(Craft.actionUrl + '/vouch/sources/test', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body,
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.ok) {
+                        setState('green', '#2E7D32', '{{ 'Connected'|t('vouch')|e('js') }}');
+                    } else {
+                        setState('red', '#C62828', errLabel);
+                    }
+                })
+                .catch(function() {
+                    setState('red', '#C62828', errLabel);
+                });
+            }
+
+            function scan() {
+                container.querySelectorAll('.vouch-connection-status[data-pending="1"]').forEach(checkChip);
+            }
+
+            new MutationObserver(scan).observe(container, { childList: true, subtree: true });
+            scan(); // in case rows landed before the observer attached
+        })();
+    {% endjs %}
+{% endif %}

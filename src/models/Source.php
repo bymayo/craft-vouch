@@ -2,9 +2,11 @@
 
 namespace bymayo\vouch\models;
 
+use bymayo\vouch\records\SourceRecord;
 use craft\base\Model;
 use craft\helpers\StringHelper;
 use craft\validators\HandleValidator;
+use craft\validators\UniqueValidator;
 
 /**
  * A configured connection to a third-party review provider. One row per
@@ -56,6 +58,18 @@ class Source extends Model
         $rules = parent::defineRules();
         $rules[] = [['providerHandle', 'name', 'handle'], 'required'];
         $rules[] = [['handle'], HandleValidator::class];
+        $rules[] = [
+            ['handle'],
+            UniqueValidator::class,
+            'targetClass' => SourceRecord::class,
+            // Filter ensures editing an existing source doesn't trigger the
+            // "in use" error against itself.
+            'filter' => function($query) {
+                if ($this->id) {
+                    $query->andWhere(['not', ['id' => $this->id]]);
+                }
+            },
+        ];
         $rules[] = [['backfillDays', 'maxRequestsPerSync', 'targetElementId'], 'integer', 'min' => 0];
         $rules[] = [['minRating'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['enabled', 'requiresApproval'], 'boolean'];

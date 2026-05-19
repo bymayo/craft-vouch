@@ -11,35 +11,40 @@ use yii\helpers\Console;
 /**
  * `craft vouch/sync/*` console commands.
  *
- * The two patterns this is designed for:
+ * Cadence is set by your cron entry, not by per-source config — there's no
+ * separate "schedule" on a Source. Examples:
  *
- *  1. **External cron + queue runner** (recommended for production):
- *     `* /5 * * * * php craft vouch/sync/due`     (queues due jobs)
- *     `* /1 * * * * php craft queue/run`           (runs the queue)
+ *  - Hourly, queue-driven (recommended):
+ *      `0 * * * *  php craft vouch/sync/all`
+ *      `* * * * *  php craft queue/run`
  *
- *  2. **Cron only, no queue worker** (small installs):
- *     `0 * * * * php craft vouch/sync/all`        (sync every enabled source, in-process)
+ *  - Daily, no queue worker (simpler, but a slow source blocks the run):
+ *      `0 4 * * *  php craft vouch/sync/all --sync`
+ *
+ *  - Different cadences per source:
+ *      `0 * * * *  php craft vouch/sync/source google-uk`
+ *      `0 4 * * *  php craft vouch/sync/source trustpilot-main`
  */
 class SyncController extends Controller
 {
     /**
-     * Force synchronous execution instead of queueing. Default true for
-     * `actionAll` (cron-friendly: nothing else needs to be running), false
-     * for `actionDue` (queue is the whole point).
+     * Force synchronous execution instead of queueing. Useful for installs
+     * without a running queue worker, and for one-off debugging.
      */
     public bool $sync = false;
 
     public function options($actionID): array
     {
         $options = parent::options($actionID);
-        if (in_array($actionID, ['all', 'due', 'source'], true)) {
+        if (in_array($actionID, ['all', 'source'], true)) {
             $options[] = 'sync';
         }
         return $options;
     }
 
     /**
-     * Sync every enabled source. Synchronous by default — cron-friendly.
+     * Sync every enabled source. Queues by default; pass `--sync` to run
+     * inline. Cron-friendly.
      */
     public function actionAll(): int
     {
@@ -55,42 +60,19 @@ class SyncController extends Controller
 
         $ok = true;
         foreach ($sources as $source) {
-            $ok = $this->runOne($source, true) && $ok;
+            if ($this->sync) {
+                $ok = $this->runOne($source) && $ok;
+            } else {
+                Vouch::getInstance()->sync->queue($source);
+                $this->stdout("Queued: {$source->name}\n");
+            }
+        }
+
+        if (!$this->sync) {
+            $this->stdout(sprintf("Queued %d source(s).\n", count($sources)), Console::FG_GREEN);
         }
 
         return $ok ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
-    }
-
-    /**
-     * Queue (or run, with `--sync`) every source whose schedule says it's due
-     * now. The intended cron target — pair with `craft queue/run` workers.
-     */
-    public function actionDue(): int
-    {
-        $vouch = Vouch::getInstance();
-        $sources = array_filter(
-            $vouch->sources->getAllSources(),
-            static fn(Source $s) => $s->enabled && Vouch::getInstance()->sync->isDue($s),
-        );
-
-        if (!$sources) {
-            $this->stdout("Nothing due.\n");
-            return ExitCode::OK;
-        }
-
-        $count = 0;
-        foreach ($sources as $source) {
-            if ($this->sync) {
-                $this->runOne($source, true);
-            } else {
-                $vouch->sync->queue($source);
-                $this->stdout("Queued: {$source->name}\n");
-            }
-            $count++;
-        }
-
-        $this->stdout(sprintf("%s %d source(s).\n", $this->sync ? 'Synced' : 'Queued', $count), Console::FG_GREEN);
-        return ExitCode::OK;
     }
 
     /**
@@ -110,7 +92,7 @@ class SyncController extends Controller
         }
 
         if ($this->sync) {
-            return $this->runOne($source, true) ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
+            return $this->runOne($source) ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
         }
 
         $jobId = $vouch->sync->queue($source);
@@ -123,7 +105,7 @@ class SyncController extends Controller
         return ExitCode::OK;
     }
 
-    private function runOne(Source $source, bool $verbose): bool
+    private function runOne(Source $source): bool
     {
         $this->stdout("→ {$source->name} ({$source->providerHandle})\n");
         $result = Vouch::getInstance()->sync->run($source);

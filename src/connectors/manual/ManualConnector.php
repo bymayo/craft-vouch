@@ -38,12 +38,7 @@ class ManualConnector extends BaseConnector
 
     public static function icon(): ?string
     {
-        return <<<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-              <path d="M14 50l4-14 28-28 10 10-28 28-14 4z" stroke="#3D7AFF" stroke-width="3" stroke-linejoin="round"/>
-              <path d="M40 14l10 10" stroke="#3D7AFF" stroke-width="3" stroke-linejoin="round"/>
-            </svg>
-        SVG;
+        return self::loadIcon('manual');
     }
 
     public static function capabilities(): array

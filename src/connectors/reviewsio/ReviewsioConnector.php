@@ -6,6 +6,7 @@ use bymayo\vouch\connectors\BaseConnector;
 use bymayo\vouch\connectors\FetchedReview;
 use bymayo\vouch\models\Source;
 use Craft;
+use craft\helpers\App;
 
 /**
  * Reviews.io connector — Merchant Reviews API.
@@ -38,12 +39,7 @@ class ReviewsioConnector extends BaseConnector
 
     public static function icon(): ?string
     {
-        // Five-point star with the Reviews.io brand blue.
-        return <<<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-              <path fill="#0E1C36" d="M32 4l7.6 18.5L60 24l-15 13 4.4 19.9L32 47.4 14.6 56.9 19 37 4 24l20.4-1.5z"/>
-            </svg>
-        SVG;
+        return self::loadIcon('reviewsio');
     }
 
     public static function settingsSchema(): array
@@ -145,8 +141,8 @@ class ReviewsioConnector extends BaseConnector
      */
     private function fetchPage(Source $source, int $page, int $perPage): array
     {
-        $storeId = (string) ($source->settings['storeId'] ?? '');
-        $apiKey = (string) ($source->credentials['apiKey'] ?? '');
+        $storeId = App::parseEnv((string) ($source->settings['storeId'] ?? ''));
+        $apiKey = App::parseEnv((string) ($source->credentials['apiKey'] ?? ''));
 
         if ($storeId === '' || $apiKey === '') {
             throw new \RuntimeException('Reviews.io source is missing storeId or apiKey.');

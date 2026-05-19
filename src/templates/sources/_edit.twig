@@ -14,6 +14,18 @@
     { label: 'Sources'|t('vouch'), url: url('vouch/sources') },
 ] %}
 
+{# Wires extra options into Craft's native Save-button dropdown
+   (top-right of full-page forms), matching how Entries / Categories
+   render their save actions. #}
+{% set formActions = [
+    {
+        label: 'Save and continue editing'|t('vouch'),
+        redirect: 'vouch/sources/{id}'|hash,
+        shortcut: true,
+        retainScroll: true,
+    },
+] %}
+
 {% block content %}
     <input type="hidden" name="action" value="vouch/sources/save">
     {{ redirectInput('vouch/sources') }}
@@ -22,6 +34,14 @@
     {% endif %}
     <input type="hidden" name="providerHandle" value="{{ source.providerHandle }}">
 
+    {% set capabilities = connector.capabilities() %}
+    {% if source.id and (capabilities.pull ?? false) %}
+        <div class="vouch-connection-status" data-source-id="{{ source.id }}">
+            <span class="status" style="background:#9CA3AF; border-color:#9CA3AF;"></span><span class="vouch-connection-text" style="font-weight:600; color:#6B7280;">{{ 'Checking…'|t('vouch') }}</span>
+        </div>
+        <hr>
+    {% endif %}
+
     {{ forms.textField({
         first: true,
         label: 'Name'|t('vouch'),
@@ -29,21 +49,28 @@
         id: 'name',
         name: 'name',
         value: source.name,
+        autofocus: true,
         required: true,
         errors: source.getErrors('name'),
     }) }}
 
-    {{ forms.autosuggestField({
+    {{ forms.textField({
         label: 'Handle'|t('vouch'),
         instructions: 'Used in Twig and code to reference this source.'|t('vouch'),
         id: 'handle',
         name: 'handle',
+        class: 'code',
         value: source.handle,
         required: true,
-        class: 'code',
-        suggestEnvVars: false,
         errors: source.getErrors('handle'),
     }) }}
+
+    {# Auto-generate the handle from the name as the user types, until the
+       handle is manually edited. Standard Craft CP behaviour, also used
+       throughout the Points plugin. #}
+    {% if not source.id %}
+        {% js %}new Craft.HandleGenerator('#name', '#handle');{% endjs %}
+    {% endif %}
 
     {{ forms.lightswitchField({
         label: 'Enabled'|t('vouch'),
@@ -60,19 +87,17 @@
         {% for field in schema %}
             {% set isSecret = field.secret ?? false %}
             {% set group = isSecret ? 'credentials' : 'settings' %}
-            {% set currentValue = isSecret ? '' : (source.settings[field.handle] ?? field.default ?? '') %}
+            {% set currentValue = isSecret ? (source.credentials[field.handle] ?? '') : (source.settings[field.handle] ?? field.default ?? '') %}
 
-            {{ forms.textField({
+            {{ forms.autosuggestField({
                 label: field.label,
                 instructions: field.instructions ?? null,
                 id: group ~ '-' ~ field.handle,
                 name: group ~ '[' ~ field.handle ~ ']',
                 value: currentValue,
                 required: field.required ?? false,
-                type: isSecret ? 'password' : (field.type ?? 'text'),
-                placeholder: isSecret and source.credentials[field.handle] is defined and source.credentials[field.handle]
-                    ? '••••••••'|t('vouch')
-                    : (field.placeholder ?? null),
+                suggestEnvVars: true,
+                placeholder: field.placeholder ?? null,
             }) }}
         {% endfor %}
     {% endif %}
@@ -82,106 +107,53 @@
 
     {{ forms.lightswitchField({
         label: 'Require manual approval'|t('vouch'),
-        instructions: 'When on, synced reviews land as Pending until approved by an admin.'|t('vouch'),
+        instructions: 'Hold reviews below {threshold}★ for admin approval.'|t('vouch', {
+            threshold: craft.app.plugins.getPlugin('vouch').getSettings().autoApproveThreshold,
+        }),
         id: 'requiresApproval',
         name: 'requiresApproval',
         on: source.requiresApproval,
     }) }}
 
-    {{ forms.textField({
-        label: 'Auto-approve threshold'|t('vouch'),
-        instructions: 'Optional. With approval on, reviews at or above this rating (0–5) are auto-approved.'|t('vouch'),
-        id: 'minRating',
-        name: 'minRating',
-        value: source.minRating,
-        type: 'number',
-        size: 5,
-    }) }}
-
-    <hr>
-    <h2>{{ 'Sync'|t('vouch') }}</h2>
-
-    {{ forms.selectField({
-        label: 'Sync schedule'|t('vouch'),
-        instructions: 'How often this source should auto-sync. “Manual” means it only syncs when triggered. Anything cron-like requires an external cron pointed at `craft vouch/sync/due`.'|t('vouch'),
-        id: 'syncInterval',
-        name: 'syncInterval',
-        value: source.syncInterval ?: 'manual',
-        options: {
-            manual: 'Manual only'|t('vouch'),
-            hourly: 'Hourly'|t('vouch'),
-            daily: 'Daily'|t('vouch'),
-        },
-    }) }}
-
-    {{ forms.textField({
-        label: 'Backfill window (days)'|t('vouch'),
-        instructions: 'On first sync, fetch reviews from up to this many days ago. Use 0 for all-time.'|t('vouch'),
-        id: 'backfillDays',
-        name: 'backfillDays',
-        value: source.backfillDays,
-        type: 'number',
-        size: 5,
-    }) }}
-
-    {% if source.id %}
-        <hr>
-        <h2>{{ 'Connection'|t('vouch') }}</h2>
-
-        <div class="flex" style="gap:.5em; align-items:center; margin-bottom:1em;">
-            <button type="button" class="btn" id="vouch-test-btn">{{ 'Test connection'|t('vouch') }}</button>
-            <button type="button" class="btn submit" id="vouch-sync-btn">{{ 'Sync now'|t('vouch') }}</button>
-            <span id="vouch-conn-status" class="light"></span>
-        </div>
-
-        {% if source.lastSyncedAt %}
-            <p class="light">
-                {{ 'Last synced {when} ({status}).'|t('vouch', {
-                    when: source.lastSyncedAt|datetime('short'),
-                    status: source.lastSyncStatus ?: 'unknown',
-                }) }}
-                {% if source.lastSyncError %}
-                    <span class="error">{{ source.lastSyncError }}</span>
-                {% endif %}
-            </p>
-        {% endif %}
-
+    {% if source.id and (capabilities.pull ?? false) %}
         {% js %}
+            // Auto-check the connection on page load and render the result
+            // as a status dot + label, matching the Akeneo settings page.
+            // No button, no panel — just a chip.
             (function() {
-                const sourceId = {{ source.id }};
-                const csrfName = '{{ craft.app.config.general.csrfTokenName|e('js') }}';
-                const csrfValue = '{{ craft.app.request.csrfToken|e('js') }}';
-                const status = document.getElementById('vouch-conn-status');
+                var container = document.querySelector('.vouch-connection-status[data-source-id]');
+                if (!container) return;
+                var dot = container.querySelector('.status');
+                var text = container.querySelector('.vouch-connection-text');
 
-                function post(action, parse) {
-                    const body = new FormData();
-                    body.append(csrfName, csrfValue);
-                    body.append('sourceId', sourceId);
-                    status.textContent = '{{ 'Working…'|t('vouch')|e('js') }}';
-                    return fetch(Craft.getActionUrl(action), {
-                        method: 'POST',
-                        body: body,
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    }).then(r => r.json()).then(parse).catch(e => {
-                        status.textContent = e.message || '{{ 'Request failed.'|t('vouch')|e('js') }}';
-                    });
+                var body = new FormData();
+                body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                body.append('sourceId', container.dataset.sourceId);
+
+                function setState(klass, color, label) {
+                    // Clear the loading-state inline styles so the .status
+                    // colour class (green/red) takes over cleanly.
+                    dot.removeAttribute('style');
+                    dot.className = 'status ' + klass;
+                    text.style.color = color;
+                    text.textContent = label;
                 }
 
-                document.getElementById('vouch-test-btn').addEventListener('click', function() {
-                    post('vouch/sources/test', function(json) {
-                        status.textContent = json.message || '';
-                        status.className = json.ok ? '' : 'error';
-                    });
-                });
-
-                document.getElementById('vouch-sync-btn').addEventListener('click', function() {
-                    post('vouch/sources/sync', function(json) {
-                        status.textContent = json.message || '';
-                        status.className = json.ok ? '' : 'error';
-                        if (json.ok && (json.created || json.updated)) {
-                            setTimeout(() => location.reload(), 600);
-                        }
-                    });
+                fetch(Craft.actionUrl + '/vouch/sources/test', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body,
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data && data.ok) {
+                        setState('green', '#2E7D32', '{{ 'Connected'|t('vouch')|e('js') }}');
+                    } else {
+                        setState('red', '#C62828', (data && data.message) ? data.message : '{{ 'Connection failed.'|t('vouch')|e('js') }}');
+                    }
+                })
+                .catch(function() {
+                    setState('red', '#C62828', '{{ 'Connection failed.'|t('vouch')|e('js') }}');
                 });
             })();
         {% endjs %}

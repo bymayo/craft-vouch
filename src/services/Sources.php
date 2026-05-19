@@ -116,8 +116,15 @@ class Sources extends Component
 
         $source->id = $record->id;
         $source->uid = $record->uid;
-        $source->dateCreated = $record->dateCreated;
-        $source->dateUpdated = $record->dateUpdated;
+        // ActiveRecord returns date columns as strings, but the Source
+        // model declares these as `?\DateTime` for type safety in callers.
+        // Coerce here so the model's contract stays honest.
+        $source->dateCreated = $record->dateCreated
+            ? ($record->dateCreated instanceof \DateTime ? $record->dateCreated : new \DateTime((string) $record->dateCreated))
+            : null;
+        $source->dateUpdated = $record->dateUpdated
+            ? ($record->dateUpdated instanceof \DateTime ? $record->dateUpdated : new \DateTime((string) $record->dateUpdated))
+            : null;
 
         $this->_allCache = null;
         return true;
@@ -169,15 +176,27 @@ class Sources extends Component
         return $source;
     }
 
+    /**
+     * Yii's `encryptByKey()` returns raw binary (HMAC + IV + ciphertext),
+     * which MySQL's utf8mb4 TEXT columns reject. Base64-wrapping the value
+     * keeps the column type stable and means the encrypted blob is also
+     * safe in JSON-encoded project-config exports etc.
+     */
     private function encrypt(string $plaintext): string
     {
-        return Craft::$app->getSecurity()->encryptByKey($plaintext);
+        return base64_encode(
+            Craft::$app->getSecurity()->encryptByKey($plaintext),
+        );
     }
 
     private function decrypt(string $ciphertext): ?string
     {
         try {
-            $value = Craft::$app->getSecurity()->decryptByKey($ciphertext);
+            $binary = base64_decode($ciphertext, true);
+            if ($binary === false) {
+                return null;
+            }
+            $value = Craft::$app->getSecurity()->decryptByKey($binary);
             return $value !== false ? $value : null;
         } catch (\Throwable) {
             // App security key changed or value isn't actually encrypted —

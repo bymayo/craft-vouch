@@ -19,6 +19,17 @@ abstract class BaseConnector implements ConnectorInterface
         return null;
     }
 
+    /**
+     * Helper for connector subclasses — loads the SVG markup for a brand
+     * logo stored in `src/resources/icons/<name>.svg`. Centralises the path
+     * resolution so each connector only has to know its filename.
+     */
+    protected static function loadIcon(string $name): ?string
+    {
+        $path = dirname(__DIR__) . '/resources/icons/' . $name . '.svg';
+        return file_exists($path) ? file_get_contents($path) : null;
+    }
+
     public static function capabilities(): array
     {
         return [

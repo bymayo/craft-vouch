@@ -239,14 +239,9 @@ class Reviews extends Component
             return;
         }
 
-        // Approval queue is on. Auto-approve only when a `minRating` is set
-        // and the review meets it — gives admins a "let 4★+ through, hold
-        // 1–3★ for review" workflow without manual triage on every sync.
-        if ($source->minRating !== null && $review->rating >= $source->minRating) {
-            $review->approved = true;
-            return;
-        }
-
-        $review->approved = false;
+        // Approval queue is on. Reviews at or above the plugin-wide
+        // threshold skip the queue; anything less holds for an admin.
+        $threshold = Vouch::getInstance()->getSettings()->autoApproveThreshold;
+        $review->approved = $review->rating >= $threshold;
     }
 }

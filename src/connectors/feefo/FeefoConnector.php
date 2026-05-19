@@ -6,6 +6,7 @@ use bymayo\vouch\connectors\BaseConnector;
 use bymayo\vouch\connectors\FetchedReview;
 use bymayo\vouch\models\Source;
 use Craft;
+use craft\helpers\App;
 
 /**
  * Feefo connector — Reviews API v20.
@@ -43,14 +44,7 @@ class FeefoConnector extends BaseConnector
 
     public static function icon(): ?string
     {
-        // Stylised "F" — Feefo's mark is wordy; a coloured roundel reads
-        // cleaner at the icon size we render.
-        return <<<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-              <circle cx="32" cy="32" r="30" fill="#F39200"/>
-              <path fill="#fff" d="M22 18h22v8H30v6h12v8H30v14h-8z"/>
-            </svg>
-        SVG;
+        return self::loadIcon('feefo');
     }
 
     public static function settingsSchema(): array
@@ -171,12 +165,12 @@ class FeefoConnector extends BaseConnector
      */
     private function fetchPage(Source $source, int $page, int $perPage): array
     {
-        $merchant = (string) ($source->settings['merchantIdentifier'] ?? '');
+        $merchant = App::parseEnv((string) ($source->settings['merchantIdentifier'] ?? ''));
         if ($merchant === '') {
             throw new \RuntimeException('Feefo source is missing merchantIdentifier.');
         }
 
-        $apiKey = (string) ($source->credentials['apiKey'] ?? '');
+        $apiKey = App::parseEnv((string) ($source->credentials['apiKey'] ?? ''));
         $client = Craft::createGuzzleClient(['timeout' => 20]);
 
         $headers = ['Accept' => 'application/json'];

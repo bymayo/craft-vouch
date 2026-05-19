@@ -28,14 +28,28 @@ class Settings extends Model
      */
     public bool $matchAuthorsToUsers = true;
 
-    /** Default backfill window (days) for newly-created sources. */
-    public int $defaultBackfillDays = 90;
+    /**
+     * On a source's *first* sync, fetch reviews from up to this many days
+     * ago. After that the `lastSyncedAt` cursor drives the window, so this
+     * value only matters at first-ingest time. 0 = unlimited (all history).
+     */
+    public int $backfillDays = 90;
+
+    /**
+     * When a source has `requiresApproval` on, reviews at or above this
+     * rating skip the queue and land approved. Everything below holds for
+     * an admin to look at. 5.0 means "only perfect-score reviews are
+     * auto-approved" — the strictest sensible default; turn `requiresApproval`
+     * off entirely if you want everything to land approved.
+     */
+    public float $autoApproveThreshold = 5.0;
 
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
         $rules[] = [['pluginName'], 'required'];
-        $rules[] = [['emailRetentionDays', 'defaultBackfillDays'], 'integer', 'min' => 0];
+        $rules[] = [['emailRetentionDays', 'backfillDays'], 'integer', 'min' => 0];
+        $rules[] = [['autoApproveThreshold'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['matchAuthorsToUsers'], 'boolean'];
         return $rules;
     }

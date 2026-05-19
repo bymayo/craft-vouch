@@ -9,7 +9,10 @@
 ] %}
 
 {% block actionButton %}
-    {% if currentUser.can('vouch-createReviews') %}
+    {# Only useful when at least one Manual source exists; otherwise the
+       button would just redirect to "create a Manual source first". #}
+    {% set hasManual = craft.app.plugins.getPlugin('vouch').sources.getSourcesByProvider('manual')|length > 0 %}
+    {% if hasManual and currentUser.can('vouch-createReviews') %}
         <a href="{{ url('vouch/reviews/new') }}" class="btn submit add icon">
             {{ 'New review'|t('vouch') }}
         </a>

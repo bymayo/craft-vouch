@@ -6,6 +6,7 @@ use bymayo\vouch\connectors\BaseConnector;
 use bymayo\vouch\connectors\FetchedReview;
 use bymayo\vouch\models\Source;
 use Craft;
+use craft\helpers\App;
 
 /**
  * Trustpilot connector — public Business Units API.
@@ -42,12 +43,7 @@ class TrustpilotConnector extends BaseConnector
 
     public static function icon(): ?string
     {
-        // Trustpilot uses a single green star as its mark.
-        return <<<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-              <path fill="#00B67A" d="M32 4l7.4 22.7H63L43.8 40.8 51.2 63.5 32 49.4 12.8 63.5l7.4-22.7L1 26.7h23.6z"/>
-            </svg>
-        SVG;
+        return self::loadIcon('trustpilot');
     }
 
     public static function settingsSchema(): array
@@ -142,8 +138,8 @@ class TrustpilotConnector extends BaseConnector
      */
     private function fetchPage(Source $source, int $page, int $perPage): array
     {
-        $apiKey = (string) ($source->credentials['apiKey'] ?? '');
-        $businessUnitId = (string) ($source->settings['businessUnitId'] ?? '');
+        $apiKey = App::parseEnv((string) ($source->credentials['apiKey'] ?? ''));
+        $businessUnitId = App::parseEnv((string) ($source->settings['businessUnitId'] ?? ''));
 
         if ($apiKey === '' || $businessUnitId === '') {
             throw new \RuntimeException('Trustpilot source is missing apiKey or businessUnitId.');

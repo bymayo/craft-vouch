@@ -21,10 +21,6 @@ use yii\base\Component;
  */
 class Sync extends Component
 {
-    public const INTERVAL_MANUAL = 'manual';
-    public const INTERVAL_HOURLY = 'hourly';
-    public const INTERVAL_DAILY = 'daily';
-
     /**
      * Fired before a source sync begins. Listeners can set
      * `$event->cancelled = true` to skip the run.
@@ -50,19 +46,17 @@ class Sync extends Component
     }
 
     /**
-     * Queue jobs for every enabled source whose schedule says it's due now.
-     * Intended to be called from cron via `vouch/sync/due`.
+     * Queue jobs for every enabled source. Intended to be called from cron
+     * via `craft vouch/sync/all` — the cron's own cadence is the schedule;
+     * there's no per-source schedule on top of it.
      *
      * @return int Number of jobs queued.
      */
-    public function queueAllDue(): int
+    public function queueAll(): int
     {
         $count = 0;
         foreach (Vouch::getInstance()->sources->getAllSources() as $source) {
             if (!$source->enabled) {
-                continue;
-            }
-            if (!$this->isDue($source)) {
                 continue;
             }
             if ($this->queue($source) !== null) {
@@ -70,55 +64,6 @@ class Sync extends Component
             }
         }
         return $count;
-    }
-
-    /**
-     * Should this source be re-synced now, given its configured interval and
-     * the last successful sync timestamp? Sources with `manual` (or an empty
-     * interval) are never due — they only sync via the CP button or an
-     * explicit console call.
-     */
-    public function isDue(Source $source): bool
-    {
-        $interval = $source->syncInterval ?: self::INTERVAL_MANUAL;
-        if ($interval === self::INTERVAL_MANUAL) {
-            return false;
-        }
-
-        // No prior sync at all → due immediately.
-        if (!$source->lastSyncedAt) {
-            return true;
-        }
-
-        $now = new \DateTime();
-        $elapsed = $now->getTimestamp() - $source->lastSyncedAt->getTimestamp();
-
-        switch ($interval) {
-            case self::INTERVAL_HOURLY:
-                return $elapsed >= 3600;
-            case self::INTERVAL_DAILY:
-                return $elapsed >= 86400;
-        }
-
-        // Anything else is treated as a cron expression. Fall back to "due"
-        // if parsing fails so a typo doesn't silently stop a source from
-        // ever syncing — better to over-sync than to go quiet.
-        return $this->isCronDue($interval, $source->lastSyncedAt);
-    }
-
-    private function isCronDue(string $expression, \DateTime $lastSync): bool
-    {
-        if (!class_exists(\Cron\CronExpression::class)) {
-            return true;
-        }
-
-        try {
-            $cron = new \Cron\CronExpression($expression);
-            $nextAfterLast = $cron->getNextRunDate($lastSync);
-            return $nextAfterLast <= new \DateTime();
-        } catch (\Throwable) {
-            return true;
-        }
     }
 
     /**
@@ -203,11 +148,12 @@ class Sync extends Component
             return (clone $source->lastSyncedAt)->modify('-1 hour');
         }
 
-        if ($source->backfillDays <= 0) {
+        $days = Vouch::getInstance()->getSettings()->backfillDays;
+        if ($days <= 0) {
             return null;
         }
 
-        return (new \DateTime())->modify('-' . $source->backfillDays . ' days');
+        return (new \DateTime())->modify('-' . $days . ' days');
     }
 
     private function finish(Source $source, SyncResult $result): SyncResult

@@ -35,6 +35,17 @@
     }) }}
 
     {{ forms.textField({
+        label: 'Auto-approve threshold'|t('vouch'),
+        instructions: 'For sources where “Require manual approval” is on, reviews at or above this rating (0–5) skip the queue. Default 5 means only perfect-score reviews are auto-approved.'|t('vouch'),
+        id: 'autoApproveThreshold',
+        name: 'settings[autoApproveThreshold]',
+        value: settings.autoApproveThreshold,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('autoApproveThreshold'),
+    }) }}
+
+    {{ forms.textField({
         label: 'Email retention (days)'|t('vouch'),
         instructions: 'How long to keep reviewer emails. After this, the email is purged but the hash stays so user matching still works. 0 = never purge.'|t('vouch'),
         id: 'emailRetentionDays',
@@ -46,13 +57,13 @@
     }) }}
 
     {{ forms.textField({
-        label: 'Default backfill (days)'|t('vouch'),
-        instructions: 'Default backfill window applied to new sources. Per-source overrides win.'|t('vouch'),
-        id: 'defaultBackfillDays',
-        name: 'settings[defaultBackfillDays]',
-        value: settings.defaultBackfillDays,
+        label: 'Backfill window (days)'|t('vouch'),
+        instructions: 'On a source’s first sync, fetch reviews from up to this many days ago. After that the last-synced timestamp drives the window. 0 = pull all history.'|t('vouch'),
+        id: 'backfillDays',
+        name: 'settings[backfillDays]',
+        value: settings.backfillDays,
         type: 'number',
         size: 5,
-        errors: settings.getErrors('defaultBackfillDays'),
+        errors: settings.getErrors('backfillDays'),
     }) }}
 {% endblock %}

@@ -6,6 +6,7 @@ use bymayo\vouch\connectors\BaseConnector;
 use bymayo\vouch\connectors\FetchedReview;
 use bymayo\vouch\models\Source;
 use Craft;
+use craft\helpers\App;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
@@ -43,14 +44,7 @@ class GoogleConnector extends BaseConnector
 
     public static function icon(): ?string
     {
-        return <<<'SVG'
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-11.3 8 12 12 0 1 1 7.9-21l5.6-5.7A20 20 0 1 0 24 44a20 20 0 0 0 19.6-23.5z"/>
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3 0 5.8 1.2 7.9 3l5.6-5.7A20 20 0 0 0 6.3 14.7z"/>
-              <path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.3A12 12 0 0 1 12.7 28.5l-6.6 5A20 20 0 0 0 24 44z"/>
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4.1 5.5l6.2 5.3C37 39.3 44 34 44 24c0-1.2-.1-2.4-.4-3.5z"/>
-            </svg>
-        SVG;
+        return self::loadIcon('google');
     }
 
     public static function settingsSchema(): array
@@ -147,8 +141,8 @@ class GoogleConnector extends BaseConnector
      */
     private function fetchPlace(Source $source): array
     {
-        $apiKey = (string) ($source->credentials['apiKey'] ?? '');
-        $placeId = (string) ($source->settings['placeId'] ?? '');
+        $apiKey = App::parseEnv((string) ($source->credentials['apiKey'] ?? ''));
+        $placeId = App::parseEnv((string) ($source->settings['placeId'] ?? ''));
 
         if ($apiKey === '' || $placeId === '') {
             throw new \RuntimeException('Google source is missing apiKey or placeId.');
