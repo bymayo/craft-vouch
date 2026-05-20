@@ -146,22 +146,35 @@ class SourcesController extends Controller
             }
         }
 
-        // No standalone provider picker page — the sources index renders
-        // a tile for each provider as the entry point. If somebody hits
-        // /sources/new without a provider, send them back to the index.
-        if (!$source->id && !$source->providerHandle) {
+        $providers = $vouch->providers->all();
+        if (empty($providers)) {
             return $this->redirect('vouch/sources');
         }
 
-        $connector = $vouch->providers->get($source->providerHandle);
+        // New source landing on /sources/new without a provider param —
+        // default to the first available so the form has something to
+        // render. The user can switch via the dropdown.
+        if (!$source->id && !$source->providerHandle) {
+            $source->providerHandle = array_key_first($providers);
+        }
+
+        $connector = $providers[$source->providerHandle] ?? null;
         if (!$connector) {
             throw new NotFoundHttpException("Unknown provider: {$source->providerHandle}");
+        }
+
+        // Pre-compute every provider's schema so the template can render
+        // a block per provider — JS shows/hides based on the dropdown.
+        $schemas = [];
+        foreach ($providers as $handle => $p) {
+            $schemas[$handle] = $p::settingsSchema();
         }
 
         return $this->renderTemplate('vouch/sources/_edit', [
             'source' => $source,
             'connector' => $connector,
-            'schema' => $connector::settingsSchema(),
+            'providers' => $providers,
+            'schemas' => $schemas,
         ]);
     }
 

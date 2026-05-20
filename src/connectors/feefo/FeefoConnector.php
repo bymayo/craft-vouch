@@ -59,7 +59,7 @@ class FeefoConnector extends BaseConnector
             ],
             [
                 'handle' => 'apiKey',
-                'label' => 'API key (optional)',
+                'label' => 'API key',
                 'instructions' => 'Only required for paid plans that expose richer fields. Leave blank to use the public feed.',
                 'type' => 'text',
                 'secret' => true,

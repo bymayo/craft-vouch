@@ -32,7 +32,10 @@
     {% if source.id %}
         <input type="hidden" name="sourceId" value="{{ source.id }}">
     {% endif %}
-    <input type="hidden" name="providerHandle" value="{{ source.providerHandle }}">
+    {# Provider handle is always submitted via this hidden input so a
+       disabled-on-edit dropdown doesn't lose the value, and so JS can drive
+       it from the dropdown for new sources. #}
+    <input type="hidden" name="providerHandle" id="providerHandleInput" value="{{ source.providerHandle }}">
 
     {% set capabilities = connector.capabilities() %}
     {% if source.id and (capabilities.pull ?? false) %}
@@ -77,26 +80,81 @@
         on: source.enabled,
     }) }}
 
-    {% if schema|length %}
-        <hr>
-        <h2>{{ 'Connection Details'|t('vouch') }}</h2>
+    <hr>
+    <h2>{{ 'Connection Details'|t('vouch') }}</h2>
 
-        {% for field in schema %}
-            {% set isSecret = field.secret ?? false %}
-            {% set group = isSecret ? 'credentials' : 'settings' %}
-            {% set currentValue = isSecret ? (source.credentials[field.handle] ?? '') : (source.settings[field.handle] ?? field.default ?? '') %}
+    {% set providerOptions = [] %}
+    {% for handle, p in providers %}
+        {% set providerOptions = providerOptions|merge([{ value: handle, label: p.displayName() }]) %}
+    {% endfor %}
 
-            {{ forms.autosuggestField({
-                label: field.label,
-                instructions: field.instructions ?? null,
-                id: group ~ '-' ~ field.handle,
-                name: group ~ '[' ~ field.handle ~ ']',
-                value: currentValue,
-                required: field.required ?? false,
-                suggestEnvVars: true,
-                placeholder: field.placeholder ?? null,
-            }) }}
-        {% endfor %}
+    {{ forms.selectField({
+        label: 'Provider'|t('vouch'),
+        id: 'providerSelect',
+        value: source.providerHandle,
+        options: providerOptions,
+        required: true,
+        disabled: source.id ? true : false,
+    }) }}
+
+    {# Render every provider's schema once. JS hides non-active blocks and
+       disables their inputs so only the selected provider's fields post.
+       Avoids field-name collisions (e.g. `credentials[apiKey]` exists in
+       Google, Trustpilot and Reviews.io). #}
+    {% for handle, p in providers %}
+        {% set schema = schemas[handle] %}
+        {% set isActive = handle == source.providerHandle %}
+        {% if schema|length %}
+            <div class="vouch-schema-block" data-provider="{{ handle }}"{% if not isActive %} style="display:none;" hidden{% endif %}>
+                {% for field in schema %}
+                    {% set isSecret = field.secret ?? false %}
+                    {% set group = isSecret ? 'credentials' : 'settings' %}
+                    {% set currentValue = isActive
+                        ? (isSecret ? (source.credentials[field.handle] ?? '') : (source.settings[field.handle] ?? field.default ?? ''))
+                        : '' %}
+
+                    {{ forms.autosuggestField({
+                        label: field.label,
+                        instructions: field.instructions ?? null,
+                        id: handle ~ '-' ~ group ~ '-' ~ field.handle,
+                        name: group ~ '[' ~ field.handle ~ ']',
+                        value: currentValue,
+                        required: field.required ?? false,
+                        disabled: not isActive,
+                        suggestEnvVars: true,
+                        placeholder: field.placeholder ?? null,
+                    }) }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if not source.id %}
+        {% js %}
+            // Provider switcher — show/hide schema blocks and toggle their
+            // inputs' disabled state so only the active provider's fields
+            // make it into the POST. The hidden providerHandle input
+            // mirrors the selected value.
+            (function() {
+                var select = document.getElementById('providerSelect');
+                var hidden = document.getElementById('providerHandleInput');
+                if (!select || !hidden) return;
+
+                function activate(handle) {
+                    hidden.value = handle;
+                    document.querySelectorAll('.vouch-schema-block').forEach(function(block) {
+                        var match = block.dataset.provider === handle;
+                        block.style.display = match ? '' : 'none';
+                        if (match) { block.removeAttribute('hidden'); } else { block.setAttribute('hidden', ''); }
+                        block.querySelectorAll('input, textarea, select').forEach(function(input) {
+                            input.disabled = !match;
+                        });
+                    });
+                }
+
+                select.addEventListener('change', function(e) { activate(e.target.value); });
+            })();
+        {% endjs %}
     {% endif %}
 
     <hr>

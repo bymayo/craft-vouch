@@ -367,6 +367,7 @@ class Vouch extends Plugin
 
                 $event->rules['vouch/sources'] = 'vouch/sources/index';
                 $event->rules['vouch/sources/table-data'] = 'vouch/sources/table-data';
+                $event->rules['vouch/sources/new'] = 'vouch/sources/edit';
                 $event->rules['vouch/sources/new/<provider:[a-z0-9\-]+>'] = 'vouch/sources/edit';
                 $event->rules['vouch/sources/<sourceId:\d+>'] = 'vouch/sources/edit';
                 $event->rules['POST vouch/sources/save'] = 'vouch/sources/save';
