@@ -35,9 +35,12 @@
     {% endif %}
 
     {% if not review.id %}
-        {% set sourceOptions = {} %}
+        {# Use the array-of-objects form so Twig doesn't reindex integer
+           keys when merging — that bug was causing every option to post
+           a sourceId of 0 and the save action to fail with "Unknown source". #}
+        {% set sourceOptions = [] %}
         {% for s in manualSources %}
-            {% set sourceOptions = sourceOptions|merge({ (s.id): s.name }) %}
+            {% set sourceOptions = sourceOptions|merge([{ value: s.id, label: s.name }]) %}
         {% endfor %}
         {{ forms.selectField({
             first: true,
@@ -93,6 +96,7 @@
         name: 'authorEmail',
         value: review.authorEmail,
         type: 'email',
+        disabled: review.id ? true : false,
     }) }}
 
     {{ forms.elementSelectField({

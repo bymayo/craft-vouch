@@ -75,4 +75,32 @@ class VouchVariable
         $sum = array_sum(array_map(fn(Review $r) => $r->rating, $reviews));
         return $sum / count($reviews);
     }
+
+    /**
+     * Average approved rating across all sources for a specific element
+     * (entry, product, etc.). Use on a PDP / detail page:
+     *
+     *   {% set rating = craft.vouch.ratingForElement(entry.id) %}
+     */
+    public function ratingForElement(?int $elementId): ?float
+    {
+        if (!$elementId) return null;
+        return Vouch::getInstance()->reviews->averageRatingForElement($elementId);
+    }
+
+    /**
+     * Per-source rating + count for an element. Returns an array of rows:
+     *
+     *   [{ sourceId, sourceName, providerHandle, average, count }, ...]
+     *
+     * Useful for rendering a "Google: 4.5 (8), Trustpilot: 3.8 (7)" line on
+     * the front-end alongside the overall average.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function ratingBreakdownForElement(?int $elementId): array
+    {
+        if (!$elementId) return [];
+        return Vouch::getInstance()->reviews->ratingBreakdownForElement($elementId);
+    }
 }

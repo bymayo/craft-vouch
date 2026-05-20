@@ -20,11 +20,17 @@ use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
 use craft\db\Query;
+use craft\base\Element;
+use craft\elements\Entry;
+use craft\events\DefineAttributeHtmlEvent;
+use craft\events\DefineHtmlEvent;
 use craft\events\RegisterComponentTypesEvent;
+use craft\events\RegisterElementTableAttributesEvent;
 use craft\events\RegisterGqlQueriesEvent;
 use craft\events\RegisterGqlTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
+use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\services\Elements;
@@ -135,6 +141,115 @@ class Vouch extends Plugin
     {
         return Craft::$app->getResponse()->redirect(
             \craft\helpers\UrlHelper::cpUrl('vouch/settings')
+        );
+    }
+
+    /**
+     * Bolt a "Rating" column + sidebar summary onto Entries (and Commerce
+     * Products if Commerce is installed). The data is per-element and pulls
+     * from approved reviews whose `relatedElementId` matches the element.
+     */
+    private function attachElementColumns(): void
+    {
+        $this->wireRatingDisplay(Entry::class);
+
+        // Commerce Products get the same treatment, gated on the plugin
+        // being installed AND enabled. Class existence check protects against
+        // an installed-but-bad Commerce package.
+        if (Craft::$app->getPlugins()->isPluginEnabled('commerce')) {
+            $productClass = \craft\commerce\elements\Product::class;
+            if (class_exists($productClass)) {
+                $this->wireRatingDisplay($productClass);
+            }
+        }
+    }
+
+    /**
+     * @param class-string<Element> $elementClass
+     */
+    private function wireRatingDisplay(string $elementClass): void
+    {
+        Event::on(
+            $elementClass,
+            Element::EVENT_REGISTER_TABLE_ATTRIBUTES,
+            function(RegisterElementTableAttributesEvent $event) {
+                $event->tableAttributes['vouchRating'] = [
+                    'label' => Craft::t('vouch', 'Rating'),
+                ];
+            },
+        );
+
+        Event::on(
+            $elementClass,
+            Element::EVENT_DEFINE_ATTRIBUTE_HTML,
+            function(DefineAttributeHtmlEvent $event) {
+                if ($event->attribute !== 'vouchRating') return;
+                /** @var Element $element */
+                $element = $event->sender;
+                if (!$element->id) {
+                    $event->html = '';
+                    return;
+                }
+                $avg = self::getInstance()->reviews->averageRatingForElement($element->id);
+                $event->html = $avg !== null
+                    ? Html::encode(number_format($avg, 1)) . ' ★'
+                    : '<span class="light">—</span>';
+            },
+        );
+
+        Event::on(
+            $elementClass,
+            Element::EVENT_DEFINE_SIDEBAR_HTML,
+            function(DefineHtmlEvent $event) {
+                /** @var Element $element */
+                $element = $event->sender;
+                if (!$element->id) return;
+
+                $reviews = self::getInstance()->reviews;
+                $avg = $reviews->averageRatingForElement($element->id);
+                if ($avg === null) return; // no reviews — nothing to show
+
+                $breakdown = $reviews->ratingBreakdownForElement($element->id);
+                $event->html .= self::buildRatingSidebarHtml($avg, $breakdown);
+            },
+        );
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $breakdown
+     */
+    private static function buildRatingSidebarHtml(float $avg, array $breakdown): string
+    {
+        $total = array_sum(array_map(fn($r) => (int) ($r['count'] ?? 0), $breakdown));
+
+        $rows = '';
+        foreach ($breakdown as $row) {
+            $rows .= sprintf(
+                '<div style="display:flex;justify-content:space-between;font-size:.85em;padding:.2em 0;">'
+                . '<span>%s</span><span><strong>%s</strong> <span class="light">(%d)</span></span>'
+                . '</div>',
+                Html::encode((string) ($row['sourceName'] ?? '?')),
+                Html::encode(number_format((float) $row['average'], 1)),
+                (int) $row['count'],
+            );
+        }
+
+        return sprintf(
+            '<div class="meta read-only" style="margin-top:1em;">'
+            . '<div class="data" style="padding:.75em 1em;">'
+            . '<h5 style="margin:0 0 .35em;">%s</h5>'
+            . '<div style="display:flex;align-items:baseline;gap:.4em;margin-bottom:.5em;">'
+            . '<span style="font-size:1.6em;font-weight:600;">%s</span>'
+            . '<span style="font-size:1.1em;">★</span>'
+            . '<span class="light" style="font-size:.85em;">(%d %s)</span>'
+            . '</div>'
+            . '%s'
+            . '</div></div>',
+            Html::encode(Craft::t('vouch', 'Rating')),
+            Html::encode(number_format($avg, 1)),
+            $total,
+            Html::encode(Craft::t('vouch', $total === 1 ? 'review' : 'reviews')),
+            $rows,
         );
     }
 
@@ -275,6 +390,7 @@ class Vouch extends Plugin
         );
 
         $this->registerGraphQl();
+        $this->attachElementColumns();
 
         Event::on(
             UserPermissions::class,

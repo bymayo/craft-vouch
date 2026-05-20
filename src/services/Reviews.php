@@ -9,6 +9,7 @@ use bymayo\vouch\events\ReviewSyncEvent;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\Vouch;
 use Craft;
+use craft\db\Query;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use yii\base\Component;
@@ -31,6 +32,54 @@ class Reviews extends Component
      * never re-fires on re-sync.
      */
     public const EVENT_AFTER_APPROVE_REVIEW = 'afterApproveReview';
+
+    /**
+     * Average approved rating across every review related to the given
+     * element id. Used by the entry/product index "Rating" column. Runs
+     * as a single AVG aggregate so it stays cheap when the column is on.
+     */
+    public function averageRatingForElement(int $elementId): ?float
+    {
+        $avg = (new Query())
+            ->from('{{%vouch_reviews}}')
+            ->where(['relatedElementId' => $elementId, 'approved' => true])
+            ->average('rating');
+
+        return $avg !== null ? (float) $avg : null;
+    }
+
+    /**
+     * Per-source rating + review count for the given element. Used by the
+     * sidebar summary so admins can see "Google: 4.5 (8), Trustpilot: 3.8 (7)"
+     * at a glance.
+     *
+     * @return array<int, array{sourceId:int, sourceName:string, providerHandle:string, average:float, count:int}>
+     */
+    public function ratingBreakdownForElement(int $elementId): array
+    {
+        $rows = (new Query())
+            ->from(['r' => '{{%vouch_reviews}}'])
+            ->leftJoin(['s' => '{{%vouch_sources}}'], '[[r.sourceId]] = [[s.id]]')
+            ->select([
+                'sourceId' => 's.id',
+                'sourceName' => 's.name',
+                'providerHandle' => 's.providerHandle',
+                'average' => 'AVG([[r.rating]])',
+                'count' => 'COUNT(*)',
+            ])
+            ->where(['r.relatedElementId' => $elementId, 'r.approved' => true])
+            ->groupBy(['s.id', 's.name', 's.providerHandle'])
+            ->orderBy(['average' => SORT_DESC])
+            ->all();
+
+        return array_map(fn($row) => [
+            'sourceId' => (int) $row['sourceId'],
+            'sourceName' => (string) $row['sourceName'],
+            'providerHandle' => (string) $row['providerHandle'],
+            'average' => (float) $row['average'],
+            'count' => (int) $row['count'],
+        ], $rows);
+    }
 
     /**
      * Find an existing Review by `(sourceId, externalId)`. Returns null if
