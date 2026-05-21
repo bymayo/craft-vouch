@@ -190,13 +190,22 @@ class Vouch extends Plugin
                     $event->html = '';
                     return;
                 }
-                $avg = self::getInstance()->reviews->averageRatingForElement($element->id);
-                $event->html = $avg !== null
-                    ? Html::encode(number_format($avg, 1)) . ' ★'
-                    : '<span class="light">—</span>';
+                $summary = self::getInstance()->reviews->ratingSummaryForElement($element->id);
+                if ($summary === null) {
+                    $event->html = '<span class="light">—</span>';
+                    return;
+                }
+                $event->html = sprintf(
+                    '%s ★ <span class="light">(%d %s)</span>',
+                    Html::encode(number_format($summary['avg'], 1)),
+                    $summary['count'],
+                    Html::encode(Craft::t('vouch', $summary['count'] === 1 ? 'review' : 'reviews')),
+                );
             },
         );
 
+        // Append after the standard sidebar content so the Rating block
+        // sits beneath the Status / Notes panes as a peer panel.
         Event::on(
             $elementClass,
             Element::EVENT_DEFINE_SIDEBAR_HTML,
@@ -207,50 +216,148 @@ class Vouch extends Plugin
 
                 $reviews = self::getInstance()->reviews;
                 $avg = $reviews->averageRatingForElement($element->id);
-                if ($avg === null) return; // no reviews — nothing to show
+                if ($avg === null) return;
 
                 $breakdown = $reviews->ratingBreakdownForElement($element->id);
-                $event->html .= self::buildRatingSidebarHtml($avg, $breakdown);
+                $event->html .= self::buildRatingPaneHtml($avg, $breakdown, (int) $element->id, get_class($element));
             },
         );
     }
 
     /**
+     * Sidebar pane using `<fieldset><legend class="h6">…</legend><div class="meta">…</div></fieldset>` —
+     * Craft's own Status-pane structure — with `.field` rows so spacing is
+     * driven entirely by Craft's CSS.
+     *
      * @param array<int, array<string, mixed>> $breakdown
      */
-    private static function buildRatingSidebarHtml(float $avg, array $breakdown): string
+    private static function buildRatingPaneHtml(float $avg, array $breakdown, int $elementId, string $elementType): string
     {
         $total = array_sum(array_map(fn($r) => (int) ($r['count'] ?? 0), $breakdown));
 
-        $rows = '';
-        foreach ($breakdown as $row) {
-            $rows .= sprintf(
-                '<div style="display:flex;justify-content:space-between;font-size:.85em;padding:.2em 0;">'
-                . '<span>%s</span><span><strong>%s</strong> <span class="light">(%d)</span></span>'
-                . '</div>',
-                Html::encode((string) ($row['sourceName'] ?? '?')),
-                Html::encode(number_format((float) $row['average'], 1)),
-                (int) $row['count'],
-            );
-        }
-
-        return sprintf(
-            '<div class="meta read-only" style="margin-top:1em;">'
-            . '<div class="data" style="padding:.75em 1em;">'
-            . '<h5 style="margin:0 0 .35em;">%s</h5>'
-            . '<div style="display:flex;align-items:baseline;gap:.4em;margin-bottom:.5em;">'
-            . '<span style="font-size:1.6em;font-weight:600;">%s</span>'
-            . '<span style="font-size:1.1em;">★</span>'
-            . '<span class="light" style="font-size:.85em;">(%d %s)</span>'
-            . '</div>'
-            . '%s'
-            . '</div></div>',
+        // Rating row — stars + numeric value.
+        $rows = sprintf(
+            '<div class="field"><div class="heading"><label>%s</label></div>'
+            . '<div class="input">%s</div></div>',
             Html::encode(Craft::t('vouch', 'Rating')),
-            Html::encode(number_format($avg, 1)),
+            self::renderStarRating($avg),
+        );
+
+        // Reviews row — link to the reviews index with a pre-applied
+        // "Related element" condition filter pointing at this element.
+        $reviewsUrl = self::buildReviewsLinkForElement($elementId, $elementType);
+        $rows .= sprintf(
+            '<div class="field"><div class="heading"><label>%s</label></div>'
+            . '<div class="input"><a href="%s">%d %s</a></div></div>',
+            Html::encode(Craft::t('vouch', 'Reviews')),
+            Html::encode($reviewsUrl),
             $total,
             Html::encode(Craft::t('vouch', $total === 1 ? 'review' : 'reviews')),
+        );
+
+        $heading = self::getInstance()->getSettings()->pluginName ?: Craft::t('vouch', 'Rating');
+
+        return sprintf(
+            '<fieldset>'
+            . '<legend class="h6">%s</legend>'
+            . '<div class="meta">%s</div>'
+            . '</fieldset>',
+            Html::encode($heading),
             $rows,
         );
+    }
+
+    /**
+     * Builds a deep-link to the reviews index with a pre-applied
+     * "Related element" condition pointing at `$elementId`.
+     *
+     * Craft serialises element-index filters into a `filters` query param
+     * that is itself a URL-encoded query string (so the outer URL ends up
+     * double-encoded). This mirrors the exact structure Craft generates
+     * when a user applies the same filter via the UI.
+     */
+    private static function buildReviewsLinkForElement(int $elementId, string $elementType): string
+    {
+        $ruleClass = \bymayo\vouch\elements\conditions\RelatedElementConditionRule::class;
+        $conditionClass = \bymayo\vouch\elements\conditions\ReviewCondition::class;
+        $reviewClass = \bymayo\vouch\elements\Review::class;
+        $ruleUid = \craft\helpers\StringHelper::UUID();
+
+        $ruleType = json_encode([
+            'class' => $ruleClass,
+            'uid' => $ruleUid,
+            'elementIds' => [],
+            'elementType' => $elementType,
+        ], JSON_UNESCAPED_SLASHES);
+
+        $configJson = json_encode([
+            'elementType' => $reviewClass,
+            'fieldContext' => 'global',
+        ], JSON_UNESCAPED_SLASHES);
+
+        $filtersInner = http_build_query([
+            'condition' => [
+                'class' => $conditionClass,
+                'config' => $configJson,
+                'conditionRules' => [
+                    1 => [
+                        'uid' => $ruleUid,
+                        'class' => $ruleClass,
+                        'type' => $ruleType,
+                        'operator' => '',
+                        'elementType' => $elementType,
+                        'elementIds' => (string) $elementId,
+                    ],
+                ],
+                'new-rule-type' => '',
+            ],
+        ]);
+
+        return \craft\helpers\UrlHelper::cpUrl('vouch/reviews', [
+            'source' => '*',
+            'filters' => $filtersInner,
+        ]);
+    }
+
+    /**
+     * Renders a rating as 5 inline SVG stars + the numeric value in parens.
+     * Inline SVG avoids the font-glyph fallback issue that broke the half-
+     * star Unicode character. Half-star uses `clip-path: inset(...)` so we
+     * don't need unique `<defs>` ids per render.
+     */
+    private static function renderStarRating(float $rating): string
+    {
+        $full = max(0, (int) floor($rating));
+        $half = ($rating - $full) >= 0.5 ? 1 : 0;
+        $empty = max(0, 5 - $full - $half);
+
+        $stars = str_repeat(self::starSvg('full'), $full)
+            . str_repeat(self::starSvg('half'), $half)
+            . str_repeat(self::starSvg('empty'), $empty);
+
+        return sprintf(
+            '%s <span class="light">(%s)</span>',
+            $stars,
+            Html::encode(number_format($rating, 1)),
+        );
+    }
+
+    /**
+     * @param 'full'|'half'|'empty' $variant
+     */
+    private static function starSvg(string $variant): string
+    {
+        $path = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
+        $open = '<svg viewBox="0 0 24 24" width="14" height="14" style="display:inline-block;vertical-align:-2px;">';
+
+        return match ($variant) {
+            'full' => $open . '<path d="' . $path . '" fill="currentColor"/></svg>',
+            'half' => $open
+                . '<path d="' . $path . '" fill="currentColor" opacity="0.25"/>'
+                . '<path d="' . $path . '" fill="currentColor" style="clip-path: inset(0 50% 0 0);"/>'
+                . '</svg>',
+            'empty' => $open . '<path d="' . $path . '" fill="currentColor" opacity="0.25"/></svg>',
+        };
     }
 
     private function registerGraphQl(): void

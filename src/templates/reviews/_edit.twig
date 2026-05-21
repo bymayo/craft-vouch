@@ -1,9 +1,16 @@
 {# @var review \bymayo\vouch\elements\Review #}
 {# @var manualSources \bymayo\vouch\models\Source[] #}
 {# @var isManual bool #}
+{# @var relatedElement \craft\base\ElementInterface|null #}
+{# @var relatedElementType string #}
 
 {% extends '_layouts/cp' %}
 {% import '_includes/forms' as forms %}
+
+{# Existing reviews are read-only across the board — content is fixed once
+   saved (synced reviews would be overwritten anyway, manual reviews stay
+   immutable for audit consistency). #}
+{% set isReadOnly = review.id ? true : false %}
 
 {% set fullPageForm = true %}
 {% set title = review.id ? review.getUiLabel() : 'New review'|t('vouch') %}
@@ -25,135 +32,194 @@
         <input type="hidden" name="reviewId" value="{{ review.id }}">
     {% endif %}
 
-    {% if review.id and not isManual %}
-        <div class="readable" style="background:#FFF8E1; border:1px solid #F0C36D; padding:1em 1.25em; border-radius:6px; margin-bottom:1.5em;">
-            <strong>{{ 'Heads up:'|t('vouch') }}</strong>
-            {{ 'This review came from {provider}. Any edits will be overwritten the next time the source syncs.'|t('vouch', {
-                provider: review.getSource() ? review.getSource().name : review.getSource().providerHandle,
-            }) }}
-        </div>
-    {% endif %}
-
-    {% if not review.id %}
-        {# Use the array-of-objects form so Twig doesn't reindex integer
-           keys when merging — that bug was causing every option to post
-           a sourceId of 0 and the save action to fail with "Unknown source". #}
-        {% set sourceOptions = [] %}
-        {% for s in manualSources %}
-            {% set sourceOptions = sourceOptions|merge([{ value: s.id, label: s.name }]) %}
-        {% endfor %}
-        {{ forms.selectField({
-            first: true,
-            label: 'Source'|t('vouch'),
-            instructions: 'Which Manual source this review belongs to.'|t('vouch'),
-            id: 'sourceId',
-            name: 'sourceId',
-            value: review.sourceId,
-            options: sourceOptions,
-            required: true,
-        }) }}
-    {% endif %}
-
-    {{ forms.textField({
-        first: review.id ? true : false,
+    {{ forms.selectField({
+        first: true,
         label: 'Rating'|t('vouch'),
-        instructions: '0–5, decimals allowed.'|t('vouch'),
         id: 'rating',
         name: 'rating',
-        value: review.rating,
-        type: 'number',
-        size: 5,
+        value: (review.rating ?: 5)|round,
+        options: [
+            { value: 5, label: '5 ★★★★★' },
+            { value: 4, label: '4 ★★★★' },
+            { value: 3, label: '3 ★★★' },
+            { value: 2, label: '2 ★★' },
+            { value: 1, label: '1 ★' },
+        ],
         required: true,
+        disabled: isReadOnly,
         errors: review.getErrors('rating'),
     }) }}
 
     {{ forms.textField({
-        label: 'Title'|t('vouch'),
+        label: 'Headline'|t('vouch'),
         id: 'title',
         name: 'title',
         value: review.title,
+        required: true,
+        disabled: isReadOnly,
     }) }}
 
     {{ forms.textareaField({
-        label: 'Body'|t('vouch'),
+        label: 'Review'|t('vouch'),
         id: 'body',
         name: 'body',
         value: review.body,
         rows: 5,
+        required: true,
+        disabled: isReadOnly,
     }) }}
 
     {{ forms.textField({
-        label: 'Author name'|t('vouch'),
+        label: 'Reviewer name'|t('vouch'),
         id: 'authorName',
         name: 'authorName',
         value: review.authorName,
+        required: true,
+        disabled: isReadOnly,
     }) }}
 
     {{ forms.textField({
-        label: 'Author email'|t('vouch'),
-        instructions: 'Used for Craft user matching. Stored but purged after the retention window.'|t('vouch'),
+        label: 'Reviewer email'|t('vouch'),
         id: 'authorEmail',
         name: 'authorEmail',
         value: review.authorEmail,
         type: 'email',
-        disabled: review.id ? true : false,
-    }) }}
-
-    {{ forms.elementSelectField({
-        label: 'Craft user (optional)'|t('vouch'),
-        instructions: 'Attach this review to a Craft user. Used by the Points trigger.'|t('vouch'),
-        id: 'authorUserId',
-        name: 'authorUserId',
-        elementType: 'craft\\elements\\User',
-        elements: review.getAuthorUser() ? [review.getAuthorUser()] : [],
-        limit: 1,
-    }) }}
-
-    {{ forms.dateTimeField({
-        label: 'Reviewed at'|t('vouch'),
-        id: 'reviewedAt',
-        name: 'reviewedAt',
-        value: review.reviewedAt,
+        required: true,
+        disabled: isReadOnly,
     }) }}
 
     {{ forms.textareaField({
         label: 'Business reply'|t('vouch'),
-        instructions: 'Optional response from the business to the review.'|t('vouch'),
         id: 'response',
         name: 'response',
         value: review.response,
         rows: 3,
+        disabled: isReadOnly,
     }) }}
 
-    {{ forms.elementSelectField({
-        label: 'Related element'|t('vouch'),
-        instructions: 'Optionally relate this review to an entry, product, or other element.'|t('vouch'),
-        id: 'relatedElementId',
-        name: 'relatedElementId',
-        elementType: 'craft\\base\\Element',
-        elements: review.relatedElementId
-            ? [craft.app.elements.getElementById(review.relatedElementId)]|filter(e => e)
-            : [],
-        limit: 1,
-    }) }}
-
-    {{ forms.lightswitchField({
-        label: 'Approved'|t('vouch'),
-        instructions: 'Unapproved reviews are excluded from the public Twig and GraphQL surfaces.'|t('vouch'),
-        id: 'approved',
-        name: 'approved',
-        on: review.approved,
-    }) }}
-
-    {% if review.id %}
-        <hr>
-        <a class="error delete" role="button"
-           data-action="vouch/reviews/delete"
-           data-confirm="{{ 'Delete this review?'|t('vouch') }}"
-           data-param="reviewId"
-           data-value="{{ review.id }}"
-           data-redirect="{{ 'vouch/reviews'|hash }}">
-            {{ 'Delete review'|t('vouch') }}
-        </a>
+    {# Related element — type dropdown drives which element-select is shown. #}
+    {% set elementTypeOptions = [
+        { value: 'craft\\elements\\Entry', label: 'Entry'|t('vouch') },
+        { value: 'craft\\elements\\Asset', label: 'Asset'|t('vouch') },
+        { value: 'craft\\elements\\Category', label: 'Category'|t('vouch') },
+        { value: 'craft\\elements\\User', label: 'User'|t('vouch') },
+    ] %}
+    {% if craft.app.plugins.isPluginEnabled('commerce') %}
+        {% set elementTypeOptions = elementTypeOptions|merge([
+            { value: 'craft\\commerce\\elements\\Product', label: 'Product'|t('vouch') },
+        ]) %}
     {% endif %}
+
+    <hr>
+
+    {{ forms.selectField({
+        label: 'Related element type'|t('vouch'),
+        id: 'relatedElementType',
+        name: '_relatedElementType',
+        value: relatedElementType,
+        options: elementTypeOptions,
+        disabled: isReadOnly,
+    }) }}
+
+    {% for opt in elementTypeOptions %}
+        {% set isActive = opt.value == relatedElementType %}
+        <div class="vouch-element-block" data-type="{{ opt.value }}"{% if not isActive %} hidden{% endif %}>
+            {{ forms.elementSelectField({
+                label: 'Related element'|t('vouch'),
+                id: 'relatedElementId-' ~ loop.index,
+                name: 'relatedElementId',
+                elementType: opt.value,
+                elements: (isActive and relatedElement) ? [relatedElement] : [],
+                limit: 1,
+                required: true,
+                disabled: isReadOnly,
+            }) }}
+        </div>
+    {% endfor %}
+
+    {% if not isReadOnly %}
+        {% js %}
+            (function() {
+                var select = document.getElementById('relatedElementType');
+                if (!select) return;
+
+                function apply(activeType) {
+                    document.querySelectorAll('.vouch-element-block').forEach(function(block) {
+                        var match = block.dataset.type === activeType;
+                        if (match) { block.removeAttribute('hidden'); } else { block.setAttribute('hidden', ''); }
+                        block.querySelectorAll('input[type="hidden"]').forEach(function(input) {
+                            input.disabled = !match;
+                        });
+                    });
+                }
+
+                apply(select.value);
+                select.addEventListener('change', function(e) { apply(e.target.value); });
+            })();
+        {% endjs %}
+    {% endif %}
+
+{% endblock %}
+
+{% block details %}
+    {# Right-side metadata sidebar — mirrors how Craft renders Entries,
+       Categories etc. with status / dates / related entities on the right. #}
+    <div id="meta-details" class="meta">
+        {% if not review.id %}
+            {% set sourceOptions = [] %}
+            {% for s in manualSources %}
+                {% set sourceOptions = sourceOptions|merge([{ value: s.id, label: s.name }]) %}
+            {% endfor %}
+            {{ forms.selectField({
+                label: 'Source'|t('vouch'),
+                id: 'sourceId',
+                name: 'sourceId',
+                value: review.sourceId,
+                options: sourceOptions,
+                required: true,
+            }) }}
+        {% else %}
+            <div class="field">
+                <div class="heading">
+                    <label>{{ 'Source'|t('vouch') }}</label>
+                </div>
+                <div class="input">
+                    {% if review.getSource() %}
+                        <a href="{{ url('vouch/sources/' ~ review.getSource().id) }}">{{ review.getSource().name }}</a>
+                    {% else %}
+                        <span class="light">—</span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {{ forms.dateTimeField({
+            label: 'Review Date'|t('vouch'),
+            id: 'reviewedAt',
+            name: 'reviewedAt',
+            value: review.reviewedAt,
+            required: true,
+            disabled: isReadOnly,
+        }) }}
+
+        {{ forms.elementSelectField({
+            label: 'Reviewer user'|t('vouch'),
+            instructions: 'Auto-matched from the reviewer email. Override by selecting a different user here.'|t('vouch'),
+            id: 'authorUserId',
+            name: 'authorUserId',
+            elementType: 'craft\\elements\\User',
+            elements: review.getAuthorUser() ? [review.getAuthorUser()] : [],
+            limit: 1,
+            disabled: isReadOnly,
+        }) }}
+
+        {# Approved stays editable even on read-only reviews so admins can
+           still flip pending reviews live without going via the bulk index. #}
+        {{ forms.lightswitchField({
+            label: 'Approved'|t('vouch'),
+            id: 'approved',
+            name: 'approved',
+            on: review.approved,
+        }) }}
+    </div>
 {% endblock %}

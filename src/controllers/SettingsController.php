@@ -26,8 +26,13 @@ class SettingsController extends Controller
     {
         $this->requirePostRequest();
 
-        $params = Craft::$app->getRequest()->getBodyParam('settings', []);
-        if (!Vouch::getInstance()->saveSettings((array) $params)) {
+        $plugin = Vouch::getInstance();
+        $params = (array) Craft::$app->getRequest()->getBodyParam('settings', []);
+
+        // Route through Craft's Plugins service so settings persist to
+        // Project Config (and therefore project.yaml). `config/vouch.php`
+        // still overlays per-environment via our `setSettings()` override.
+        if (!Craft::$app->getPlugins()->savePluginSettings($plugin, $params)) {
             Craft::$app->getSession()->setError(Craft::t('vouch', 'Couldn’t save settings.'));
             return null;
         }

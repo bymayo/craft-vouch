@@ -49,6 +49,31 @@ class Reviews extends Component
     }
 
     /**
+     * Combined avg + count for a single element. Single SQL query rather
+     * than two separate aggregates. Returns null when the element has no
+     * approved reviews.
+     *
+     * @return array{avg:float,count:int}|null
+     */
+    public function ratingSummaryForElement(int $elementId): ?array
+    {
+        $row = (new Query())
+            ->from('{{%vouch_reviews}}')
+            ->select(['avg' => 'AVG(rating)', 'count' => 'COUNT(*)'])
+            ->where(['relatedElementId' => $elementId, 'approved' => true])
+            ->one();
+
+        if (!$row || $row['count'] == 0) {
+            return null;
+        }
+
+        return [
+            'avg' => (float) $row['avg'],
+            'count' => (int) $row['count'],
+        ];
+    }
+
+    /**
      * Per-source rating + review count for the given element. Used by the
      * sidebar summary so admins can see "Google: 4.5 (8), Trustpilot: 3.8 (7)"
      * at a glance.

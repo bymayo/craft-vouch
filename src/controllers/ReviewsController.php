@@ -63,10 +63,21 @@ class ReviewsController extends Controller
         $manualSources = $vouch->sources->getSourcesByProvider(ManualConnector::handle());
         $isManual = $review->getSource()?->providerHandle === ManualConnector::handle();
 
+        // Resolve the related element + its concrete class here so the Twig
+        // template doesn't need a `|class` filter (which doesn't exist).
+        $relatedElement = $review->relatedElementId
+            ? Craft::$app->getElements()->getElementById($review->relatedElementId)
+            : null;
+        $relatedElementType = $relatedElement
+            ? get_class($relatedElement)
+            : \craft\elements\Entry::class;
+
         return $this->renderTemplate('vouch/reviews/_edit', [
             'review' => $review,
             'manualSources' => $manualSources,
             'isManual' => $isManual,
+            'relatedElement' => $relatedElement,
+            'relatedElementType' => $relatedElementType,
         ]);
     }
 

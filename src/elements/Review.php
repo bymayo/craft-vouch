@@ -2,12 +2,14 @@
 
 namespace bymayo\vouch\elements;
 
+use bymayo\vouch\elements\conditions\ReviewCondition;
 use bymayo\vouch\elements\db\ReviewQuery;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\records\ReviewRecord;
 use bymayo\vouch\Vouch;
 use Craft;
 use craft\base\Element;
+use craft\elements\conditions\ElementConditionInterface;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
 use craft\helpers\Cp;
@@ -111,6 +113,11 @@ class Review extends Element
         return new ReviewQuery(static::class);
     }
 
+    public static function createCondition(): ElementConditionInterface
+    {
+        return Craft::createObject(ReviewCondition::class, [static::class]);
+    }
+
     protected static function defineSources(?string $context = null): array
     {
         $sources = [
@@ -150,6 +157,7 @@ class Review extends Element
             'rating' => ['label' => Craft::t('vouch', 'Rating')],
             'authorName' => ['label' => Craft::t('vouch', 'Author')],
             'source' => ['label' => Craft::t('vouch', 'Source')],
+            'relatedElement' => ['label' => Craft::t('vouch', 'Related element')],
             'reviewedAt' => ['label' => Craft::t('vouch', 'Reviewed')],
             'dateCreated' => ['label' => Craft::t('app', 'Date Created')],
         ];
@@ -157,7 +165,7 @@ class Review extends Element
 
     protected static function defineDefaultTableAttributes(string $source): array
     {
-        return ['rating', 'authorName', 'source', 'reviewedAt'];
+        return ['rating', 'authorName', 'source', 'relatedElement', 'reviewedAt'];
     }
 
     protected static function defineSortOptions(): array
@@ -227,11 +235,18 @@ class Review extends Element
         if ($this->title) {
             return $this->title;
         }
+        // Google reviews don't carry a title — fall back to a body snippet
+        // so the row reads as the actual review ("I loved this product")
+        // rather than an opaque "Review #2082".
+        if ($this->body) {
+            $snippet = trim((string) $this->body);
+            if (mb_strlen($snippet) > 80) {
+                $snippet = mb_substr($snippet, 0, 80) . '…';
+            }
+            return $snippet;
+        }
         if ($this->authorName) {
-            return Craft::t('vouch', '{author} ({rating}★)', [
-                'author' => $this->authorName,
-                'rating' => number_format($this->rating, 1),
-            ]);
+            return $this->authorName;
         }
         return Craft::t('vouch', 'Review #{id}', ['id' => $this->id ?? '?']);
     }
@@ -257,6 +272,12 @@ class Review extends Element
                 return $source
                     ? Html::a(Html::encode($source->name), UrlHelper::cpUrl('vouch/sources/' . $source->id))
                     : '';
+            case 'relatedElement':
+                if (!$this->relatedElementId) {
+                    return '';
+                }
+                $related = Craft::$app->getElements()->getElementById($this->relatedElementId);
+                return $related ? Cp::elementChipHtml($related) : '';
             case 'reviewedAt':
                 if (!$this->reviewedAt) {
                     return '';
@@ -291,6 +312,19 @@ class Review extends Element
         $rules[] = [['rating'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['approved'], 'boolean'];
         $rules[] = [['externalId'], 'string', 'max' => 255];
+
+        // Manual reviews require these fields too. Synced reviews are
+        // exempt — providers don't always supply title/email/etc. and we
+        // don't want a strict server-side check to reject API payloads.
+        $rules[] = [
+            ['title', 'body', 'authorName', 'authorEmail', 'reviewedAt', 'relatedElementId'],
+            'required',
+            'when' => function($model) {
+                $source = $model->getSource();
+                return $source !== null && $source->providerHandle === 'manual';
+            },
+        ];
+
         return $rules;
     }
 
