@@ -20,8 +20,8 @@ return [
     // a downstream Points integration to have a user to award against.
     'matchAuthorsToUsers' => true,
 
-    // Days to keep `authorEmail` on a synced review before it's nulled out.
-    // The `authorEmailHash` survives the purge, so user-matching by hash
+    // Days to keep `reviewerEmail` on a synced review before it's nulled out.
+    // The `reviewerEmailHash` survives the purge, so user-matching by hash
     // still works after retention expires. Set to 0 to keep emails forever.
     'emailRetentionDays' => 365,
 

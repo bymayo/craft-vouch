@@ -162,9 +162,9 @@ class ReviewsController extends Controller
      *     <input type="hidden" name="action" value="vouch/reviews/submit">
      *     <input type="hidden" name="sourceHandle" value="customer-reviews">
      *     <input type="number" name="rating" min="1" max="5" required>
-     *     <textarea name="body" required></textarea>
-     *     <input name="authorName" required>
-     *     <input name="authorEmail" type="email">
+     *     <textarea name="review" required></textarea>
+     *     <input name="reviewerName" required>
+     *     <input name="reviewerEmail" type="email">
      *     <button type="submit">Submit</button>
      *   </form>
      */
@@ -193,10 +193,10 @@ class ReviewsController extends Controller
         $review->approved = !$source->requiresApproval;
 
         $review->rating = (float) $request->getBodyParam('rating', 0);
-        $review->title = $request->getBodyParam('title');
-        $review->body = $request->getBodyParam('body');
-        $review->authorName = $request->getBodyParam('authorName');
-        $review->authorEmail = $request->getBodyParam('authorEmail');
+        $review->headline = $request->getBodyParam('headline');
+        $review->review = $request->getBodyParam('review');
+        $review->reviewerName = $request->getBodyParam('reviewerName');
+        $review->reviewerEmail = $request->getBodyParam('reviewerEmail');
 
         $relatedId = $request->getBodyParam('relatedElementId');
         if ($relatedId) {
@@ -237,11 +237,11 @@ class ReviewsController extends Controller
         }
 
         $review->rating = (float) $request->getBodyParam('rating', $review->rating);
-        $review->title = $request->getBodyParam('title', $review->title);
-        $review->body = $request->getBodyParam('body', $review->body);
-        $review->authorName = $request->getBodyParam('authorName', $review->authorName);
-        $review->authorEmail = $request->getBodyParam('authorEmail', $review->authorEmail);
-        $review->response = $request->getBodyParam('response', $review->response);
+        $review->headline = $request->getBodyParam('headline', $review->headline);
+        $review->review = $request->getBodyParam('review', $review->review);
+        $review->reviewerName = $request->getBodyParam('reviewerName', $review->reviewerName);
+        $review->reviewerEmail = $request->getBodyParam('reviewerEmail', $review->reviewerEmail);
+        $review->businessReply = $request->getBodyParam('businessReply', $review->businessReply);
         $review->approved = (bool) $request->getBodyParam('approved', $review->approved);
 
         $reviewedAt = $request->getBodyParam('reviewedAt');
@@ -255,10 +255,10 @@ class ReviewsController extends Controller
         }
         $review->relatedElementId = $relatedId ? (int) $relatedId : null;
 
-        $authorUserId = $request->getBodyParam('authorUserId');
-        if (is_array($authorUserId)) {
-            $authorUserId = reset($authorUserId) ?: null;
+        $reviewerUserId = $request->getBodyParam('reviewerUserId');
+        if (is_array($reviewerUserId)) {
+            $reviewerUserId = reset($reviewerUserId) ?: null;
         }
-        $review->authorUserId = $authorUserId ? (int) $authorUserId : null;
+        $review->reviewerUserId = $reviewerUserId ? (int) $reviewerUserId : null;
     }
 }

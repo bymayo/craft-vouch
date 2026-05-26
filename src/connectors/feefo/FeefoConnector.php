@@ -135,15 +135,15 @@ class FeefoConnector extends BaseConnector
                 yield new FetchedReview(
                     externalId: $externalId,
                     rating: min(5.0, (float) $rawRating),
-                    title: $service['title'] ?? null,
-                    body: $service['review'] ?? null,
-                    authorName: $row['customer']['name'] ?? null,
+                    headline: $service['title'] ?? null,
+                    review: $service['review'] ?? null,
+                    reviewerName: $row['customer']['name'] ?? null,
                     // Feefo redacts customer email by default; some plans
                     // surface it under `customer.email`. Pass it through
                     // when present, leave null otherwise.
-                    authorEmail: $row['customer']['email'] ?? null,
+                    reviewerEmail: $row['customer']['email'] ?? null,
                     reviewedAt: $reviewedAt,
-                    response: $service['reply'] ?? null,
+                    businessReply: $service['reply'] ?? null,
                     raw: $row,
                 );
             }

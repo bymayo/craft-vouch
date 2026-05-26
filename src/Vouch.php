@@ -56,7 +56,7 @@ use yii\base\Event;
  */
 class Vouch extends Plugin
 {
-    public string $schemaVersion = '1.0.0';
+    public string $schemaVersion = '1.0.1';
     public bool $hasCpSettings = true;
     public bool $hasCpSection = true;
 
@@ -381,7 +381,7 @@ class Vouch extends Plugin
                         'rating' => Type::float(),
                         'minRating' => Type::float(),
                         'approved' => Type::boolean(),
-                        'authorUserId' => Type::int(),
+                        'reviewerUserId' => Type::int(),
                         'relatedElementId' => Type::int(),
                         'limit' => Type::int(),
                         'offset' => Type::int(),
@@ -405,8 +405,8 @@ class Vouch extends Plugin
                         if (isset($args['minRating'])) {
                             $query->rating('>= ' . (float)$args['minRating']);
                         }
-                        if (isset($args['authorUserId'])) {
-                            $query->authorUserId((int)$args['authorUserId']);
+                        if (isset($args['reviewerUserId'])) {
+                            $query->reviewerUserId((int)$args['reviewerUserId']);
                         }
                         if (isset($args['relatedElementId'])) {
                             $query->relatedElementId((int)$args['relatedElementId']);

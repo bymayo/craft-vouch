@@ -44,18 +44,18 @@ class Install extends Migration
             'sourceId' => $this->integer()->notNull(),
             'externalId' => $this->string()->notNull(),
             'rating' => $this->decimal(3, 2)->notNull()->defaultValue(0),
-            'title' => $this->string(),
-            'body' => $this->text(),
-            'authorName' => $this->string(),
-            'authorEmail' => $this->string(),
+            'headline' => $this->string(),
+            'review' => $this->text(),
+            'reviewerName' => $this->string(),
+            'reviewerEmail' => $this->string(),
             // SHA-256 of lower-cased email. Survives PII purge so the Points
             // integration can still match reviews to users after retention
-            // has expired and `authorEmail` has been nulled out.
-            'authorEmailHash' => $this->string(64),
-            'authorUserId' => $this->integer(),
+            // has expired and `reviewerEmail` has been nulled out.
+            'reviewerEmailHash' => $this->string(64),
+            'reviewerUserId' => $this->integer(),
             'relatedElementId' => $this->integer(),
             'reviewedAt' => $this->dateTime(),
-            'response' => $this->text(),
+            'businessReply' => $this->text(),
             // Provider's raw JSON for forensics / future schema evolution.
             'raw' => $this->longText(),
             'approved' => $this->boolean()->notNull()->defaultValue(true),
@@ -63,15 +63,15 @@ class Install extends Migration
         ]);
 
         $this->createIndex(null, '{{%vouch_reviews}}', ['sourceId', 'externalId'], true);
-        $this->createIndex(null, '{{%vouch_reviews}}', ['authorEmailHash']);
-        $this->createIndex(null, '{{%vouch_reviews}}', ['authorUserId']);
+        $this->createIndex(null, '{{%vouch_reviews}}', ['reviewerEmailHash']);
+        $this->createIndex(null, '{{%vouch_reviews}}', ['reviewerUserId']);
         $this->createIndex(null, '{{%vouch_reviews}}', ['relatedElementId']);
         $this->createIndex(null, '{{%vouch_reviews}}', ['rating']);
         $this->createIndex(null, '{{%vouch_reviews}}', ['approved']);
 
         $this->addForeignKey(null, '{{%vouch_reviews}}', ['id'], '{{%elements}}', ['id'], 'CASCADE');
         $this->addForeignKey(null, '{{%vouch_reviews}}', ['sourceId'], '{{%vouch_sources}}', ['id'], 'CASCADE');
-        $this->addForeignKey(null, '{{%vouch_reviews}}', ['authorUserId'], '{{%users}}', ['id'], 'SET NULL');
+        $this->addForeignKey(null, '{{%vouch_reviews}}', ['reviewerUserId'], '{{%users}}', ['id'], 'SET NULL');
         $this->addForeignKey(null, '{{%vouch_reviews}}', ['relatedElementId'], '{{%elements}}', ['id'], 'SET NULL');
 
         return true;

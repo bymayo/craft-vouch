@@ -30,10 +30,10 @@
 - Backfill window for first sync is a global setting (`backfillDays`), `0` = pull all history.
 
 #### Manual reviews
-- "New review" button on the reviews index opens a full element-edit form (rating, title, body, author, related element, response, approved toggle).
+- "New review" button on the reviews index opens a full element-edit form (rating, headline, review, reviewer, related element, business reply, approved toggle).
 - Front-end submission via anonymous `vouch/reviews/submit` controller action — hard-rejects non-manual sources so customer submissions can't bypass Trustpilot/Feefo moderation.
 - API-sourced reviews show a "will be overwritten on next sync" warning when edited in the CP.
-- `Author email` field is read-only for existing reviews (editable on create).
+- `Reviewer email` field is read-only for existing reviews (editable on create).
 
 #### Moderation
 - Per-source `Require manual approval` toggle on the source edit page. When on, reviews below the global `autoApproveThreshold` (default 5) land as Pending until approved by an admin.
@@ -63,11 +63,11 @@
 #### Front-end surface
 - Twig `craft.vouch.*`: `reviews()` (chainable element query), `sources()`, `source(handle)`, `providers()`, `averageRating(sourceId?)`, `ratingForElement(elementId)`, `ratingBreakdownForElement(elementId)`, `pluginName()`.
 - GraphQL type `VouchReview` + two queries:
-  - `vouchReviews` — filterable by `sourceId`, `rating`, `minRating`, `approved`, `authorUserId`, `relatedElementId`, `limit`, `offset`. Defaults to `approved: true` on the public surface.
+  - `vouchReviews` — filterable by `sourceId`, `rating`, `minRating`, `approved`, `reviewerUserId`, `relatedElementId`, `limit`, `offset`. Defaults to `approved: true` on the public surface.
   - `vouchReview(id)` — single review by id.
 
 #### PII & GDPR
-- `authorEmailHash` (SHA-256 lowercase) stored alongside `authorEmail` so user-matching survives `emailRetentionDays` purge.
+- `reviewerEmailHash` (SHA-256 lowercase) stored alongside `reviewerEmail` so user-matching survives `emailRetentionDays` purge.
 - Credentials encrypted at rest via Craft's security key, base64-wrapped for UTF-8-safe column storage.
 
 #### Settings

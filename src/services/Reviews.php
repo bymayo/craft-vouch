@@ -139,17 +139,17 @@ class Reviews extends Component
         $review->sourceId = $source->id;
         $review->externalId = $fetched->externalId;
         $review->rating = $fetched->rating;
-        $review->title = $fetched->title;
-        $review->body = $fetched->body;
-        $review->authorName = $fetched->authorName;
-        $review->authorEmail = $fetched->authorEmail;
-        $review->authorEmailHash = $fetched->authorEmail
-            ? hash('sha256', strtolower(trim($fetched->authorEmail)))
+        $review->headline = $fetched->headline;
+        $review->review = $fetched->review;
+        $review->reviewerName = $fetched->reviewerName;
+        $review->reviewerEmail = $fetched->reviewerEmail;
+        $review->reviewerEmailHash = $fetched->reviewerEmail
+            ? hash('sha256', strtolower(trim($fetched->reviewerEmail)))
             : null;
         $review->reviewedAt = $fetched->reviewedAt instanceof \DateTime
             ? $fetched->reviewedAt
             : ($fetched->reviewedAt ? new \DateTime($fetched->reviewedAt->format('c')) : null);
-        $review->response = $fetched->response;
+        $review->businessReply = $fetched->businessReply;
         $review->raw = $fetched->raw ? Json::encode($fetched->raw) : null;
 
         // Target element relation — if the source is wired to a specific
@@ -158,7 +158,7 @@ class Reviews extends Component
         // Trustpilot product reviews carry their own product reference).
         $review->relatedElementId = $source->targetElementId;
 
-        $this->matchAuthorToUser($review);
+        $this->matchReviewerToUser($review);
         $this->applyModeration($review, $source, $isNew);
 
         if (!Craft::$app->getElements()->saveElement($review)) {
@@ -213,13 +213,13 @@ class Reviews extends Component
         $isNew = !$review->id;
         $wasApproved = $isNew ? false : (bool) $review->approved;
 
-        if ($review->authorEmail) {
-            $review->authorEmailHash = hash('sha256', strtolower(trim($review->authorEmail)));
-            if (!$review->authorUserId) {
-                $this->matchAuthorToUser($review);
+        if ($review->reviewerEmail) {
+            $review->reviewerEmailHash = hash('sha256', strtolower(trim($review->reviewerEmail)));
+            if (!$review->reviewerUserId) {
+                $this->matchReviewerToUser($review);
             }
         } else {
-            $review->authorEmailHash = null;
+            $review->reviewerEmailHash = null;
         }
 
         if (!Craft::$app->getElements()->saveElement($review)) {
@@ -280,20 +280,20 @@ class Reviews extends Component
     }
 
     /**
-     * Find an existing Craft user whose email matches the review author's,
+     * Find an existing Craft user whose email matches the reviewer's,
      * if matching is enabled and the email is known. Never auto-creates
      * users — that's a deliberate user-decision boundary.
      */
-    private function matchAuthorToUser(Review $review): void
+    private function matchReviewerToUser(Review $review): void
     {
         $settings = Vouch::getInstance()->getSettings();
-        if (!$settings->matchAuthorsToUsers || !$review->authorEmail) {
+        if (!$settings->matchAuthorsToUsers || !$review->reviewerEmail) {
             return;
         }
 
-        $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($review->authorEmail);
+        $user = Craft::$app->getUsers()->getUserByUsernameOrEmail($review->reviewerEmail);
         if ($user) {
-            $review->authorUserId = $user->id;
+            $review->reviewerUserId = $user->id;
         }
     }
 

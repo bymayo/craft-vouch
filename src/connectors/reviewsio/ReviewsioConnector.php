@@ -117,14 +117,14 @@ class ReviewsioConnector extends BaseConnector
                 yield new FetchedReview(
                     externalId: $externalId,
                     rating: (float) ($row['rating'] ?? 0),
-                    title: $row['heading'] ?? ($row['title'] ?? null),
-                    body: $row['comments'] ?? ($row['review'] ?? null),
-                    authorName: $row['reviewer']['display_name']
+                    headline: $row['heading'] ?? ($row['title'] ?? null),
+                    review: $row['comments'] ?? ($row['review'] ?? null),
+                    reviewerName: $row['reviewer']['display_name']
                         ?? $row['reviewer']['name']
                         ?? null,
-                    authorEmail: $row['reviewer']['email'] ?? null,
+                    reviewerEmail: $row['reviewer']['email'] ?? null,
                     reviewedAt: $reviewedAt,
-                    response: $row['reply'] ?? null,
+                    businessReply: $row['reply'] ?? null,
                     raw: $row,
                 );
             }

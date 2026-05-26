@@ -30,15 +30,15 @@ class Review extends Element
     public ?int $sourceId = null;
     public ?string $externalId = null;
     public float $rating = 0.0;
-    public ?string $title = null;
-    public ?string $body = null;
-    public ?string $authorName = null;
-    public ?string $authorEmail = null;
-    public ?string $authorEmailHash = null;
-    public ?int $authorUserId = null;
+    public ?string $headline = null;
+    public ?string $review = null;
+    public ?string $reviewerName = null;
+    public ?string $reviewerEmail = null;
+    public ?string $reviewerEmailHash = null;
+    public ?int $reviewerUserId = null;
     public ?int $relatedElementId = null;
     public ?\DateTime $reviewedAt = null;
-    public ?string $response = null;
+    public ?string $businessReply = null;
     public ?string $raw = null;
     public bool $approved = true;
 
@@ -155,7 +155,7 @@ class Review extends Element
     {
         return [
             'rating' => ['label' => Craft::t('vouch', 'Rating')],
-            'authorName' => ['label' => Craft::t('vouch', 'Author')],
+            'reviewerName' => ['label' => Craft::t('vouch', 'Reviewer')],
             'source' => ['label' => Craft::t('vouch', 'Source')],
             'relatedElement' => ['label' => Craft::t('vouch', 'Related element')],
             'reviewedAt' => ['label' => Craft::t('vouch', 'Reviewed')],
@@ -165,7 +165,7 @@ class Review extends Element
 
     protected static function defineDefaultTableAttributes(string $source): array
     {
-        return ['rating', 'authorName', 'source', 'relatedElement', 'reviewedAt'];
+        return ['rating', 'reviewerName', 'source', 'relatedElement', 'reviewedAt'];
     }
 
     protected static function defineSortOptions(): array
@@ -191,7 +191,7 @@ class Review extends Element
 
     protected static function defineSearchableAttributes(): array
     {
-        return ['authorName', 'title', 'body'];
+        return ['reviewerName', 'headline', 'review'];
     }
 
     public function getSource(): ?Source
@@ -202,10 +202,10 @@ class Review extends Element
         return $this->_source;
     }
 
-    public function getAuthorUser(): ?User
+    public function getReviewerUser(): ?User
     {
-        if ($this->_user === null && $this->authorUserId) {
-            $this->_user = Craft::$app->getUsers()->getUserById($this->authorUserId);
+        if ($this->_user === null && $this->reviewerUserId) {
+            $this->_user = Craft::$app->getUsers()->getUserById($this->reviewerUserId);
         }
         return $this->_user;
     }
@@ -232,21 +232,21 @@ class Review extends Element
 
     public function getUiLabel(): string
     {
-        if ($this->title) {
-            return $this->title;
+        if ($this->headline) {
+            return $this->headline;
         }
-        // Google reviews don't carry a title — fall back to a body snippet
+        // Google reviews don't carry a headline — fall back to a review snippet
         // so the row reads as the actual review ("I loved this product")
         // rather than an opaque "Review #2082".
-        if ($this->body) {
-            $snippet = trim((string) $this->body);
+        if ($this->review) {
+            $snippet = trim((string) $this->review);
             if (mb_strlen($snippet) > 80) {
                 $snippet = mb_substr($snippet, 0, 80) . '…';
             }
             return $snippet;
         }
-        if ($this->authorName) {
-            return $this->authorName;
+        if ($this->reviewerName) {
+            return $this->reviewerName;
         }
         return Craft::t('vouch', 'Review #{id}', ['id' => $this->id ?? '?']);
     }
@@ -261,12 +261,12 @@ class Review extends Element
         switch ($attribute) {
             case 'rating':
                 return $this->renderStars($this->rating);
-            case 'authorName':
-                $user = $this->getAuthorUser();
+            case 'reviewerName':
+                $user = $this->getReviewerUser();
                 if ($user) {
                     return Cp::elementChipHtml($user);
                 }
-                return Html::encode((string)$this->authorName);
+                return Html::encode((string)$this->reviewerName);
             case 'source':
                 $source = $this->getSource();
                 return $source
@@ -308,16 +308,16 @@ class Review extends Element
     {
         $rules = parent::defineRules();
         $rules[] = [['sourceId', 'externalId', 'rating'], 'required'];
-        $rules[] = [['sourceId', 'authorUserId', 'relatedElementId'], 'integer'];
+        $rules[] = [['sourceId', 'reviewerUserId', 'relatedElementId'], 'integer'];
         $rules[] = [['rating'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['approved'], 'boolean'];
         $rules[] = [['externalId'], 'string', 'max' => 255];
 
         // Manual reviews require these fields too. Synced reviews are
-        // exempt — providers don't always supply title/email/etc. and we
+        // exempt — providers don't always supply headline/email/etc. and we
         // don't want a strict server-side check to reject API payloads.
         $rules[] = [
-            ['title', 'body', 'authorName', 'authorEmail', 'reviewedAt', 'relatedElementId'],
+            ['headline', 'review', 'reviewerName', 'reviewerEmail', 'reviewedAt'],
             'required',
             'when' => function($model) {
                 $source = $model->getSource();
@@ -335,17 +335,17 @@ class Review extends Element
                 'sourceId' => $this->sourceId,
                 'externalId' => $this->externalId,
                 'rating' => $this->rating,
-                'title' => $this->title,
-                'body' => $this->body,
-                'authorName' => $this->authorName,
-                'authorEmail' => $this->authorEmail,
-                'authorEmailHash' => $this->authorEmailHash,
-                'authorUserId' => $this->authorUserId,
+                'headline' => $this->headline,
+                'review' => $this->review,
+                'reviewerName' => $this->reviewerName,
+                'reviewerEmail' => $this->reviewerEmail,
+                'reviewerEmailHash' => $this->reviewerEmailHash,
+                'reviewerUserId' => $this->reviewerUserId,
                 'relatedElementId' => $this->relatedElementId,
                 'reviewedAt' => $this->reviewedAt
                     ? $this->reviewedAt->format('Y-m-d H:i:s')
                     : null,
-                'response' => $this->response,
+                'businessReply' => $this->businessReply,
                 'raw' => $this->raw,
                 'approved' => $this->approved,
             ];

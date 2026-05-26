@@ -16,7 +16,7 @@ class ReviewQuery extends ElementQuery
     public mixed $externalId = null;
     public mixed $rating = null;
     public mixed $approved = null;
-    public mixed $authorUserId = null;
+    public mixed $reviewerUserId = null;
     public mixed $relatedElementId = null;
 
     public function sourceId(mixed $value): self
@@ -43,9 +43,9 @@ class ReviewQuery extends ElementQuery
         return $this;
     }
 
-    public function authorUserId(mixed $value): self
+    public function reviewerUserId(mixed $value): self
     {
-        $this->authorUserId = $value;
+        $this->reviewerUserId = $value;
         return $this;
     }
 
@@ -63,15 +63,15 @@ class ReviewQuery extends ElementQuery
             'vouch_reviews.sourceId',
             'vouch_reviews.externalId',
             'vouch_reviews.rating',
-            'vouch_reviews.title',
-            'vouch_reviews.body',
-            'vouch_reviews.authorName',
-            'vouch_reviews.authorEmail',
-            'vouch_reviews.authorEmailHash',
-            'vouch_reviews.authorUserId',
+            'vouch_reviews.headline',
+            'vouch_reviews.review',
+            'vouch_reviews.reviewerName',
+            'vouch_reviews.reviewerEmail',
+            'vouch_reviews.reviewerEmailHash',
+            'vouch_reviews.reviewerUserId',
             'vouch_reviews.relatedElementId',
             'vouch_reviews.reviewedAt',
-            'vouch_reviews.response',
+            'vouch_reviews.businessReply',
             'vouch_reviews.raw',
             'vouch_reviews.approved',
         ]);
@@ -88,8 +88,8 @@ class ReviewQuery extends ElementQuery
         if ($this->approved !== null) {
             $this->subQuery->andWhere(Db::parseBooleanParam('vouch_reviews.approved', $this->approved));
         }
-        if ($this->authorUserId !== null) {
-            $this->subQuery->andWhere(Db::parseParam('vouch_reviews.authorUserId', $this->authorUserId));
+        if ($this->reviewerUserId !== null) {
+            $this->subQuery->andWhere(Db::parseParam('vouch_reviews.reviewerUserId', $this->reviewerUserId));
         }
         if ($this->relatedElementId !== null) {
             $this->subQuery->andWhere(Db::parseParam('vouch_reviews.relatedElementId', $this->relatedElementId));

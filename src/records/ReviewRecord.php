@@ -9,15 +9,15 @@ use craft\db\ActiveRecord;
  * @property int $sourceId
  * @property string $externalId
  * @property float $rating
- * @property string|null $title
- * @property string|null $body
- * @property string|null $authorName
- * @property string|null $authorEmail
- * @property string|null $authorEmailHash
- * @property int|null $authorUserId
+ * @property string|null $headline
+ * @property string|null $review
+ * @property string|null $reviewerName
+ * @property string|null $reviewerEmail
+ * @property string|null $reviewerEmailHash
+ * @property int|null $reviewerUserId
  * @property int|null $relatedElementId
  * @property \DateTime|null $reviewedAt
- * @property string|null $response
+ * @property string|null $businessReply
  * @property string|null $raw
  * @property bool $approved
  */

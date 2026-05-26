@@ -58,9 +58,9 @@ The "Sync" button on each row of the Sources index runs synchronously for ad-hoc
 {# Latest 5 approved reviews from any source #}
 {% for review in craft.vouch.reviews().limit(5).all() %}
   <article>
-    <h3>{{ review.title ?: review.authorName }}</h3>
+    <h3>{{ review.headline ?: review.reviewerName }}</h3>
     <p>{{ review.rating }}★ — {{ review.reviewedAt|date('M j, Y') }}</p>
-    <blockquote>{{ review.body }}</blockquote>
+    <blockquote>{{ review.review }}</blockquote>
   </article>
 {% endfor %}
 
@@ -90,9 +90,9 @@ The "Sync" button on each row of the Sources index runs synchronously for ad-hoc
   vouchReviews(minRating: 4, limit: 10) {
     id
     rating
-    title
-    body
-    authorName
+    headline
+    review
+    reviewerName
     reviewedAt
     providerHandle
     sourceName
@@ -110,14 +110,37 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
   <input type="hidden" name="action" value="vouch/reviews/submit">
   <input type="hidden" name="sourceHandle" value="customer-reviews">
 
-  <input type="number" name="rating" min="1" max="5" required>
-  <textarea name="body" required></textarea>
-  <input name="authorName" required>
-  <input name="authorEmail" type="email">
+  {# Optional: tie the review to a specific entry / product #}
+  <input type="hidden" name="relatedElementId" value="{{ entry.id ?? '' }}">
+
+  <label for="vouch-rating">Rating *</label>
+  <select id="vouch-rating" name="rating" required>
+    <option value="">Choose a rating…</option>
+    <option value="5">5 ★★★★★</option>
+    <option value="4">4 ★★★★</option>
+    <option value="3">3 ★★★</option>
+    <option value="2">2 ★★</option>
+    <option value="1">1 ★</option>
+  </select>
+
+  <label for="vouch-headline">Headline *</label>
+  <input id="vouch-headline" name="headline" required>
+
+  <label for="vouch-review">Review *</label>
+  <textarea id="vouch-review" name="review" required></textarea>
+
+  <label for="vouch-reviewer-name">Reviewer name *</label>
+  <input id="vouch-reviewer-name" name="reviewerName" required>
+
+  <label for="vouch-reviewer-email">Reviewer email *</label>
+  <input id="vouch-reviewer-email" name="reviewerEmail" type="email" required>
 
   <button type="submit">Submit review</button>
 </form>
 ```
+
+**Required:** `sourceHandle`, `rating`, `headline`, `review`, `reviewerName`, `reviewerEmail`.
+**Optional:** `relatedElementId` (ties the review to a specific entry / product).
 
 Submissions are only accepted against Manual sources — front-end forms can't write into API-backed sources (which would bypass the provider's own moderation).
 

@@ -27,10 +27,10 @@ class ReviewType
                     'description' => "The provider's stable id for this review.",
                 ],
                 'rating' => Type::float(),
-                'title' => Type::string(),
-                'body' => Type::string(),
-                'authorName' => Type::string(),
-                'authorUserId' => [
+                'headline' => Type::string(),
+                'review' => Type::string(),
+                'reviewerName' => Type::string(),
+                'reviewerUserId' => [
                     'type' => Type::int(),
                     'description' => 'The Craft user id if the reviewer email matched an existing user.',
                 ],
@@ -40,7 +40,7 @@ class ReviewType
                     'description' => 'ISO 8601 timestamp of when the review was authored at the provider.',
                     'resolve' => fn(Review $r) => $r->reviewedAt?->format(\DateTimeInterface::ATOM),
                 ],
-                'response' => [
+                'businessReply' => [
                     'type' => Type::string(),
                     'description' => 'Optional business reply, when the provider returned one.',
                 ],

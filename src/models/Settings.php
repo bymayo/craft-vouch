@@ -15,15 +15,15 @@ class Settings extends Model
     public string $pluginName = 'Vouch';
 
     /**
-     * Days to keep `authorEmail` on a synced review before it's nulled out.
-     * The `authorEmailHash` column survives, so user matching for Points still
+     * Days to keep `reviewerEmail` on a synced review before it's nulled out.
+     * The `reviewerEmailHash` column survives, so user matching for Points still
      * works after the email is purged. Set to 0 to keep emails forever.
      */
     public int $emailRetentionDays = 365;
 
     /**
      * If true, match the reviewer's email to an existing Craft user and store
-     * the `authorUserId` on the review. Required for the Points integration to
+     * the `reviewerUserId` on the review. Required for the Points integration to
      * have something to award against.
      */
     public bool $matchAuthorsToUsers = true;

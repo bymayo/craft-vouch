@@ -20,7 +20,7 @@ use GuzzleHttp\Exception\GuzzleException;
  *    for v1.
  *  - There is no `since` filtering. We always pull the 5 most recent and let
  *    the dedup layer ignore ones we've already stored.
- *  - Google doesn't expose reviewer email addresses, so `authorEmail` is
+ *  - Google doesn't expose reviewer email addresses, so `reviewerEmail` is
  *    always null. That means the Points "match by email" path won't fire for
  *    Google reviews — by design, not a bug.
  *  - Auth is a simple API key. The key needs the Places API (New) enabled
@@ -121,12 +121,12 @@ class GoogleConnector extends BaseConnector
             yield new FetchedReview(
                 externalId: (string) $externalId,
                 rating: (float) ($row['rating'] ?? 0),
-                title: null,
-                body: $row['text']['text'] ?? ($row['originalText']['text'] ?? null),
-                authorName: $row['authorAttribution']['displayName'] ?? null,
-                authorEmail: null,
+                headline: null,
+                review: $row['text']['text'] ?? ($row['originalText']['text'] ?? null),
+                reviewerName: $row['authorAttribution']['displayName'] ?? null,
+                reviewerEmail: null,
                 reviewedAt: $publishTime,
-                response: null,
+                businessReply: null,
                 raw: $row,
             );
         }

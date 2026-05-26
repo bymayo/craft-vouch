@@ -28,15 +28,15 @@ class ReviewerUserConditionRule extends BaseElementSelectConditionRule implement
 
     public function getExclusiveQueryParams(): array
     {
-        return ['authorUserId'];
+        return ['reviewerUserId'];
     }
 
     public function modifyQuery(ElementQueryInterface $query): void
     {
         $ids = $this->getElementIds();
         if (!empty($ids)) {
-            /** @phpstan-ignore-next-line — `authorUserId()` is defined on ReviewQuery */
-            $query->authorUserId($ids[0]);
+            /** @phpstan-ignore-next-line — `reviewerUserId()` is defined on ReviewQuery */
+            $query->reviewerUserId($ids[0]);
         }
     }
 
@@ -46,7 +46,7 @@ class ReviewerUserConditionRule extends BaseElementSelectConditionRule implement
         if (empty($ids)) {
             return true;
         }
-        /** @phpstan-ignore-next-line — `authorUserId` is defined on Review */
-        return (int) $element->authorUserId === (int) $ids[0];
+        /** @phpstan-ignore-next-line — `reviewerUserId` is defined on Review */
+        return (int) $element->reviewerUserId === (int) $ids[0];
     }
 }

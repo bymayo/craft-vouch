@@ -52,18 +52,18 @@
 
     {{ forms.textField({
         label: 'Headline'|t('vouch'),
-        id: 'title',
-        name: 'title',
-        value: review.title,
+        id: 'headline',
+        name: 'headline',
+        value: review.headline,
         required: true,
         disabled: isReadOnly,
     }) }}
 
     {{ forms.textareaField({
         label: 'Review'|t('vouch'),
-        id: 'body',
-        name: 'body',
-        value: review.body,
+        id: 'review',
+        name: 'review',
+        value: review.review,
         rows: 5,
         required: true,
         disabled: isReadOnly,
@@ -71,18 +71,18 @@
 
     {{ forms.textField({
         label: 'Reviewer name'|t('vouch'),
-        id: 'authorName',
-        name: 'authorName',
-        value: review.authorName,
+        id: 'reviewerName',
+        name: 'reviewerName',
+        value: review.reviewerName,
         required: true,
         disabled: isReadOnly,
     }) }}
 
     {{ forms.textField({
         label: 'Reviewer email'|t('vouch'),
-        id: 'authorEmail',
-        name: 'authorEmail',
-        value: review.authorEmail,
+        id: 'reviewerEmail',
+        name: 'reviewerEmail',
+        value: review.reviewerEmail,
         type: 'email',
         required: true,
         disabled: isReadOnly,
@@ -90,9 +90,9 @@
 
     {{ forms.textareaField({
         label: 'Business reply'|t('vouch'),
-        id: 'response',
-        name: 'response',
-        value: review.response,
+        id: 'businessReply',
+        name: 'businessReply',
+        value: review.businessReply,
         rows: 3,
         disabled: isReadOnly,
     }) }}
@@ -131,7 +131,6 @@
                 elementType: opt.value,
                 elements: (isActive and relatedElement) ? [relatedElement] : [],
                 limit: 1,
-                required: true,
                 disabled: isReadOnly,
             }) }}
         </div>
@@ -205,10 +204,10 @@
         {{ forms.elementSelectField({
             label: 'Reviewer user'|t('vouch'),
             instructions: 'Auto-matched from the reviewer email. Override by selecting a different user here.'|t('vouch'),
-            id: 'authorUserId',
-            name: 'authorUserId',
+            id: 'reviewerUserId',
+            name: 'reviewerUserId',
             elementType: 'craft\\elements\\User',
-            elements: review.getAuthorUser() ? [review.getAuthorUser()] : [],
+            elements: review.getReviewerUser() ? [review.getReviewerUser()] : [],
             limit: 1,
             disabled: isReadOnly,
         }) }}

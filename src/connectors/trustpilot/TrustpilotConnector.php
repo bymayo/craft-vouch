@@ -116,12 +116,12 @@ class TrustpilotConnector extends BaseConnector
                 yield new FetchedReview(
                     externalId: $externalId,
                     rating: (float) ($row['stars'] ?? 0),
-                    title: $row['title'] ?? null,
-                    body: $row['text'] ?? null,
-                    authorName: $row['consumer']['displayName'] ?? null,
-                    authorEmail: null,
+                    headline: $row['title'] ?? null,
+                    review: $row['text'] ?? null,
+                    reviewerName: $row['consumer']['displayName'] ?? null,
+                    reviewerEmail: null,
                     reviewedAt: $reviewedAt,
-                    response: $row['companyReply']['text'] ?? null,
+                    businessReply: $row['companyReply']['text'] ?? null,
                     raw: $row,
                 );
             }
