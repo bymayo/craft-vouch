@@ -29,18 +29,47 @@ Add a source via **Vouch → Sources → New source**, pick the provider tile, f
 
 ### Google Reviews
 
+Google sources have a **Mode** dropdown:
+
+- **Places API** - works for any place, capped at 5 reviews per call by Google.
+- **Business Profile API** - works only for businesses you (or the OAuth-connecting account) own/manage. Returns full review history with pagination. Requires Google partner approval - see below.
+
+#### Places API mode
+
 Backed by the [Places API (New)](https://developers.google.com/maps/documentation/places/web-service/overview).
 
 1. Open the [Google Cloud Console](https://console.cloud.google.com) and create (or select) a project.
 2. Enable the **Places API (New)** under **APIs & Services → Library**.
 3. Create an API key: **APIs & Services → Credentials → Create credentials → API key**.
 4. **Strongly recommended:** restrict the key. Under the key's settings, set "Application restrictions" to your server IP(s) and "API restrictions" to Places API (New) only - that way a leaked key can't be re-used for billed Maps calls.
-5. In Vouch, on the new-source page paste the API key into the "API key" field.
-6. Use the built-in **"Find a Place ID"** search box on the same page - type the business name (e.g. *"Spicy Vegetarian Food in Sydney"*) and click **Search**. Vouch proxies the [Places Text Search](https://developers.google.com/maps/documentation/places/web-service/text-search) endpoint server-side and lists matching candidates with their name, address, and Place ID. Clicking a result auto-fills the Place ID field above. The API key never round-trips to Google directly from the browser - the request is signed by Vouch's controller.
+5. In Vouch, leave **Mode** on "Places API", paste the API key, then use the built-in **"Find a Place ID"** search box - type the business name (e.g. *"Spicy Vegetarian Food in Sydney"*) and click **Search**. Vouch proxies the [Places Text Search](https://developers.google.com/maps/documentation/places/web-service/text-search) endpoint server-side and lists matching candidates with their name, address, and Place ID. Clicking a result auto-fills the Place ID field. The API key never round-trips to Google directly from the browser - the request is signed by Vouch's controller.
 
    You can also paste a Place ID manually if you already have one from Google's [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id).
 
-> Google's Places API caps every request at **the 5 most recent reviews**. There's no way to page past that - it's an upstream constraint, not a Vouch limitation. Sync still runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. The global `backfillDays` setting still applies on first sync: if a place's most recent reviews are all older than the backfill window, you'll see "0 new, 0 updated". **Set `backfillDays` to `0` for Google sources** (unlimited history) since the upstream 5-review cap already keeps the cost bounded.
+> Google's Places API caps every request at **the 5 most recent reviews**. There's no way to page past that - it's an upstream constraint, not a Vouch limitation. Sync still runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. The global `backfillDays` setting still applies on first sync: if a place's most recent reviews are all older than the backfill window, you'll see "0 new, 0 updated". **Set `backfillDays` to `0` for Places-mode sources** (unlimited history) since the upstream 5-review cap already keeps the cost bounded.
+
+#### Business Profile API mode
+
+Backed by the [Google Business Profile API](https://developers.google.com/my-business). Pulls the **complete review history** for a business location you own/manage.
+
+> ⚠ **Google gatekeeps this endpoint.** Around 2023 Google restricted programmatic access to reviews on the Business Profile API. To use this mode in production:
+>
+> 1. Apply for access via [Google's Business Profile API form](https://support.google.com/business/contact/api_default).
+> 2. Get an OAuth 2.0 consent screen verified by Google (its own review process if your scope is "sensitive").
+> 3. Wait for approval — typically weeks; first-time applicants are often rejected.
+>
+> Without approval the OAuth flow technically completes but `GET .../reviews` returns `403 PERMISSION_DENIED`. Vouch surfaces that error verbatim in the "Test connection" status.
+
+Once approved, set up the source:
+
+1. In [Google Cloud Console](https://console.cloud.google.com), enable the **My Business Account Management API**, **My Business Business Information API**, and the **Business Profile API**.
+2. Under **APIs & Services → Credentials**, create an **OAuth 2.0 Client ID** of type "Web application". Add `https://<your-craft-site>/admin/actions/vouch/sources/google-oauth-callback` to "Authorized redirect URIs". Note the Client ID and Client Secret.
+3. In Vouch, **Add source → Google Reviews**, switch **Mode** to "Business Profile API", paste the Client ID + Client Secret. Save the source.
+4. Reload the edit page. Click **"Connect Google account"** - Vouch redirects to Google's consent screen. Approve, and Google returns to Vouch with an auth code; Vouch swaps it for a refresh token and stores it (encrypted) on the source.
+5. Once connected, fill in the **Location resource name** (`accounts/{accountId}/locations/{locationId}`). You can list your accounts/locations via the [API explorer](https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list) or `curl` against `https://mybusinessaccountmanagement.googleapis.com/v1/accounts` with your access token. Save again.
+6. Hit **"Test connection"** to confirm.
+
+The refresh token is stored encrypted in the source's `credentials` column (same mechanism as Trustpilot API keys, etc.). Vouch mints a fresh access token on every sync - tokens never persist beyond the duration of a single request.
 
 ### Trustpilot
 

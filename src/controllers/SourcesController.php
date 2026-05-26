@@ -245,6 +245,110 @@ class SourcesController extends Controller
      * API key is read from the request body (not the saved source) so it
      * works during source creation too.
      */
+    /**
+     * Kick off the Google OAuth flow for a Business Profile source. The source
+     * must already be saved (with clientId + clientSecret in credentials) so
+     * we have somewhere to write the refresh token back to.
+     */
+    public function actionConnectGoogle(): Response
+    {
+        $user = Craft::$app->getUser();
+        if (!$user->checkPermission('vouch-editSources') && !$user->checkPermission('vouch-createSources')) {
+            throw new \yii\web\ForbiddenHttpException();
+        }
+
+        $sourceId = (int) Craft::$app->getRequest()->getRequiredParam('sourceId');
+        $source = Vouch::getInstance()->sources->getSourceById($sourceId);
+        if (!$source) {
+            throw new NotFoundHttpException();
+        }
+
+        $clientId = \craft\helpers\App::parseEnv((string) ($source->credentials['clientId'] ?? ''));
+        if ($clientId === '') {
+            Craft::$app->getSession()->setError(Craft::t(
+                'vouch',
+                'Save the source with a Client ID and Client Secret before connecting.',
+            ));
+            return $this->redirect("vouch/sources/{$source->id}");
+        }
+
+        // State token lets the callback verify the redirect originated from
+        // us and route the refresh token to the right source. Stashed in the
+        // session - it expires with the session, never persisted.
+        $state = \craft\helpers\StringHelper::UUID();
+        Craft::$app->getSession()->set("vouch.googleOauth.{$state}", $source->id);
+
+        $params = http_build_query([
+            'client_id' => $clientId,
+            'redirect_uri' => \craft\helpers\UrlHelper::actionUrl('vouch/sources/google-oauth-callback'),
+            'response_type' => 'code',
+            'scope' => \bymayo\vouch\connectors\google\GoogleConnector::OAUTH_SCOPE,
+            'access_type' => 'offline',
+            'prompt' => 'consent',
+            'state' => $state,
+        ]);
+
+        return $this->redirect(\bymayo\vouch\connectors\google\GoogleConnector::OAUTH_AUTHORIZE . '?' . $params);
+    }
+
+    /**
+     * OAuth callback: receives the auth code, exchanges it for a refresh token
+     * against Google's token endpoint, and writes the token onto the source.
+     */
+    public function actionGoogleOauthCallback(): Response
+    {
+        $request = Craft::$app->getRequest();
+        $state = (string) $request->getQueryParam('state', '');
+        $code = (string) $request->getQueryParam('code', '');
+        $error = (string) $request->getQueryParam('error', '');
+
+        $sessionKey = "vouch.googleOauth.{$state}";
+        $sourceId = (int) Craft::$app->getSession()->get($sessionKey, 0);
+        Craft::$app->getSession()->remove($sessionKey);
+
+        if (!$sourceId) {
+            throw new \yii\web\BadRequestHttpException('OAuth state mismatch or expired - try connecting again.');
+        }
+
+        $source = Vouch::getInstance()->sources->getSourceById($sourceId);
+        if (!$source) {
+            throw new NotFoundHttpException();
+        }
+
+        if ($error !== '' || $code === '') {
+            Craft::$app->getSession()->setError(Craft::t(
+                'vouch',
+                'Google denied or cancelled the connection: {error}',
+                ['error' => $error ?: 'No auth code returned.'],
+            ));
+            return $this->redirect("vouch/sources/{$source->id}");
+        }
+
+        try {
+            $tokens = \bymayo\vouch\connectors\google\GoogleConnector::exchangeAuthCode(
+                clientId: \craft\helpers\App::parseEnv((string) ($source->credentials['clientId'] ?? '')),
+                clientSecret: \craft\helpers\App::parseEnv((string) ($source->credentials['clientSecret'] ?? '')),
+                code: $code,
+                redirectUri: \craft\helpers\UrlHelper::actionUrl('vouch/sources/google-oauth-callback'),
+            );
+        } catch (\Throwable $e) {
+            Craft::$app->getSession()->setError(Craft::t('vouch', 'Token exchange failed: {message}', ['message' => $e->getMessage()]));
+            return $this->redirect("vouch/sources/{$source->id}");
+        }
+
+        $credentials = $source->credentials;
+        $credentials['refreshToken'] = $tokens['refresh_token'] ?? '';
+        $source->credentials = $credentials;
+
+        if (!Vouch::getInstance()->sources->saveSource($source)) {
+            Craft::$app->getSession()->setError(Craft::t('vouch', 'Could not save the refresh token.'));
+            return $this->redirect("vouch/sources/{$source->id}");
+        }
+
+        Craft::$app->getSession()->setNotice(Craft::t('vouch', 'Google account connected.'));
+        return $this->redirect("vouch/sources/{$source->id}");
+    }
+
     public function actionFindGooglePlace(): Response
     {
         $this->requirePostRequest();

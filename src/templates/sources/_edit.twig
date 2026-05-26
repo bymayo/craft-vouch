@@ -97,6 +97,16 @@
         disabled: source.id ? true : false,
     }) }}
 
+    {# Wrapper around each schema field breaks Craft's `.field + .field`
+       margin rule (siblings are no longer direct), so reinstate the spacing
+       here. Keeps the data-vouch-mode toggle hooks without sacrificing
+       vertical rhythm. #}
+    {% css %}
+        .vouch-schema-block .vouch-schema-field + .vouch-schema-field { margin-top: 24px; }
+        .vouch-schema-block .vouch-schema-field + .vouch-google-finder,
+        .vouch-schema-block .vouch-schema-field + .vouch-google-oauth { margin-top: 24px; }
+    {% endcss %}
+
     {# Render every provider's schema once. JS hides non-active blocks and
        disables their inputs so only the selected provider's fields post.
        Avoids field-name collisions (e.g. `credentials[apiKey]` exists in
@@ -106,32 +116,56 @@
         {% set isActive = handle == source.providerHandle %}
         {% if schema|length %}
             <div class="vouch-schema-block" data-provider="{{ handle }}"{% if not isActive %} style="display:none;" hidden{% endif %}>
+                {% set activeMode = isActive ? (source.settings.mode ?? 'places') : 'places' %}
                 {% for field in schema %}
                     {% set isSecret = field.secret ?? false %}
                     {% set group = isSecret ? 'credentials' : 'settings' %}
                     {% set currentValue = isActive
                         ? (isSecret ? (source.credentials[field.handle] ?? '') : (source.settings[field.handle] ?? field.default ?? ''))
                         : '' %}
+                    {% set fieldMode = field.mode ?? null %}
+                    {% set modeHidden = fieldMode and fieldMode != activeMode %}
 
-                    {{ forms.autosuggestField({
-                        label: field.label,
-                        instructions: field.instructions ?? null,
-                        id: handle ~ '-' ~ group ~ '-' ~ field.handle,
-                        name: group ~ '[' ~ field.handle ~ ']',
-                        value: currentValue,
-                        required: field.required ?? false,
-                        disabled: not isActive,
-                        suggestEnvVars: true,
-                        placeholder: field.placeholder ?? null,
-                    }) }}
+                    <div class="vouch-schema-field"
+                         {% if fieldMode %} data-vouch-mode="{{ fieldMode }}"{% endif %}
+                         {% if modeHidden %} style="display:none;" hidden{% endif %}>
+                        {% if field.type == 'select' %}
+                            {% set selectOptions = [] %}
+                            {% for opt in (field.options ?? []) %}
+                                {% set selectOptions = selectOptions|merge([{ value: opt.value, label: opt.label }]) %}
+                            {% endfor %}
+                            {{ forms.selectField({
+                                label: field.label,
+                                instructions: field.instructions ?? null,
+                                id: handle ~ '-' ~ group ~ '-' ~ field.handle,
+                                name: group ~ '[' ~ field.handle ~ ']',
+                                value: currentValue ?: field.default ?? '',
+                                options: selectOptions,
+                                disabled: not isActive,
+                                class: handle == 'google' and field.handle == 'mode' ? 'vouch-google-mode' : '',
+                            }) }}
+                        {% else %}
+                            {{ forms.autosuggestField({
+                                label: field.label,
+                                instructions: field.instructions ?? null,
+                                id: handle ~ '-' ~ group ~ '-' ~ field.handle,
+                                name: group ~ '[' ~ field.handle ~ ']',
+                                value: currentValue,
+                                required: field.required ?? false,
+                                disabled: (not isActive) or (field.readOnly ?? false),
+                                suggestEnvVars: true,
+                                placeholder: field.placeholder ?? null,
+                            }) }}
+                        {% endif %}
+                    </div>
                 {% endfor %}
 
                 {% if handle == 'google' %}
-                    {# Search helper - calls Places Text Search via the
-                       vouch/sources/find-google-place controller action so the
-                       API key never round-trips through the browser. Picking
-                       a result populates the Place ID input above. #}
-                    <div class="vouch-google-finder" style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
+                    {# Places-mode helper: Search by text to find the right Place ID.
+                       Hidden when the Business Profile mode is active. #}
+                    <div class="vouch-google-finder" data-vouch-mode="places"
+                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;{% if activeMode != 'places' %}display:none;{% endif %}"
+                         {% if activeMode != 'places' %}hidden{% endif %}>
                         <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Find a Place ID'|t('vouch') }}</h3>
                         <p class="light" style="margin:0 0 10px 0;">
                             {{ 'Search Google Places by name or address. Requires the API key above to be filled in.'|t('vouch') }}
@@ -146,6 +180,34 @@
                         </div>
                         <div class="vouch-google-finder-status light smalltext" style="margin-top:8px;"></div>
                         <ul class="vouch-google-finder-results" style="margin:10px 0 0 0;padding:0;list-style:none;"></ul>
+                    </div>
+
+                    {# Business-Profile-mode helper: Connect via OAuth.
+                       Requires the source to be saved first (clientId/clientSecret
+                       have to live on the source row before the redirect). #}
+                    <div class="vouch-google-oauth" data-vouch-mode="businessProfile"
+                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;{% if activeMode != 'businessProfile' %}display:none;{% endif %}"
+                         {% if activeMode != 'businessProfile' %}hidden{% endif %}>
+                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Connect Google account'|t('vouch') }}</h3>
+                        {% if not source.id %}
+                            <p class="light">{{ 'Save the source first (with your Client ID + Client Secret filled in), then return here to connect.'|t('vouch') }}</p>
+                        {% else %}
+                            {% set hasRefreshToken = (source.credentials.refreshToken ?? '') != '' %}
+                            {% if hasRefreshToken %}
+                                <p style="margin:0 0 8px 0;">
+                                    <span class="status green"></span>
+                                    {{ 'Connected.'|t('vouch') }}
+                                    <a href="{{ actionUrl('vouch/sources/connect-google', { sourceId: source.id, reconnect: 1 }) }}">{{ 'Reconnect'|t('vouch') }}</a>
+                                </p>
+                            {% else %}
+                                <p class="light" style="margin:0 0 10px 0;">
+                                    {{ 'Click below to authorise Vouch with your Google account. You\'ll be redirected to Google\'s consent screen.'|t('vouch') }}
+                                </p>
+                                <a href="{{ actionUrl('vouch/sources/connect-google', { sourceId: source.id }) }}" class="btn submit">
+                                    {{ 'Connect Google account'|t('vouch') }}
+                                </a>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -179,6 +241,36 @@
             })();
         {% endjs %}
     {% endif %}
+
+    {% js %}
+        // Google mode switcher - shows the fields + helper block for the
+        // active mode (places vs businessProfile) and hides/disables the
+        // others so only the selected mode's data posts on save.
+        (function() {
+            var block = document.querySelector('.vouch-schema-block[data-provider="google"]');
+            if (!block) return;
+            var modeSelect = block.querySelector('select.vouch-google-mode')
+                || block.querySelector('select[name="settings[mode]"]');
+            if (!modeSelect) return;
+
+            function applyMode(mode) {
+                block.querySelectorAll('[data-vouch-mode]').forEach(function(el) {
+                    var match = el.dataset.vouchMode === mode;
+                    el.style.display = match ? '' : 'none';
+                    if (match) { el.removeAttribute('hidden'); } else { el.setAttribute('hidden', ''); }
+                    el.querySelectorAll('input, textarea, select').forEach(function(input) {
+                        // Skip the mode select itself - it doesn't carry data-vouch-mode
+                        // and we never want to disable it.
+                        if (input === modeSelect) return;
+                        input.disabled = !match;
+                    });
+                });
+            }
+
+            applyMode(modeSelect.value);
+            modeSelect.addEventListener('change', function(e) { applyMode(e.target.value); });
+        })();
+    {% endjs %}
 
     {% js %}
         // Google Place ID finder - POSTs to the controller proxy with the

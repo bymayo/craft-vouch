@@ -11,6 +11,11 @@
 
 #### Source UX
 - **"Find a Place ID" search** on the Google Reviews source edit page. Proxies the Places Text Search endpoint via `SourcesController::actionFindGooglePlace` using the API key from the form (works on new, unsaved sources too) and lists matching places with click-to-fill behaviour. Saves admins from hand-pasting opaque `ChIJ…` IDs.
+- **Google Business Profile API mode** on the Google source. The source edit page has a Mode dropdown: "Places API" (existing key-based behaviour, 5-review cap) or "Business Profile API" (OAuth, full review history). Business Profile mode wires:
+  - Per-source OAuth 2.0 client (Client ID + Client Secret stored encrypted on the source)
+  - "Connect Google account" button → standard `accounts.google.com` consent flow → callback exchanges the auth code for a refresh token, stored encrypted alongside the client credentials
+  - `GoogleConnector::fetchReviews()` branches on mode; the Business Profile path paginates `mybusiness.googleapis.com/v4/.../reviews`, normalises into the existing `FetchedReview` DTO, and respects the global `backfillDays` cursor.
+  - Note: Google's reviews endpoint is gated behind partner approval as of 2023 - the feature exists in Vouch but won't return data until the operator's Google Cloud project is approved by Google.
 
 #### Provider connectors
 - `ConnectorInterface` + `BaseConnector` + `FetchedReview` DTO + event-driven `ProviderRegistry` - third-party plugins can add their own connectors via `EVENT_REGISTER_PROVIDERS`.

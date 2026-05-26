@@ -33,6 +33,16 @@ class GoogleConnector extends BaseConnector
     public const ENDPOINT_PLACE = 'https://places.googleapis.com/v1/places/';
     public const ENDPOINT_SEARCH = 'https://places.googleapis.com/v1/places:searchText';
 
+    /** OAuth + Business Profile API endpoints. */
+    public const OAUTH_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth';
+    public const OAUTH_TOKEN = 'https://oauth2.googleapis.com/token';
+    public const OAUTH_SCOPE = 'https://www.googleapis.com/auth/business.manage';
+    public const ENDPOINT_BUSINESS_REVIEWS = 'https://mybusiness.googleapis.com/v4/';
+    public const ENDPOINT_ACCOUNTS = 'https://mybusinessaccountmanagement.googleapis.com/v1/accounts';
+
+    public const MODE_PLACES = 'places';
+    public const MODE_BUSINESS_PROFILE = 'businessProfile';
+
     public static function handle(): string
     {
         return 'google';
@@ -48,30 +58,86 @@ class GoogleConnector extends BaseConnector
         return self::loadIcon('google');
     }
 
+    /**
+     * Schema declares every field across both modes. The source edit template
+     * has a Google-specific UI block that renders the mode dropdown and uses
+     * JS to show only the active mode's fields.
+     */
     public static function settingsSchema(): array
     {
         return [
+            [
+                'handle' => 'mode',
+                'label' => 'Mode',
+                'type' => 'select',
+                'default' => self::MODE_PLACES,
+                'options' => [
+                    ['value' => self::MODE_PLACES, 'label' => 'Places API (5 most recent, any place)'],
+                    ['value' => self::MODE_BUSINESS_PROFILE, 'label' => 'Business Profile API (full history, only owned profiles)'],
+                ],
+            ],
+            // --- Places API mode fields ---
             [
                 'handle' => 'apiKey',
                 'label' => 'API key',
                 'instructions' => 'A Google Cloud API key with the Places API (New) enabled.',
                 'type' => 'text',
                 'secret' => true,
-                'required' => true,
+                'mode' => self::MODE_PLACES,
             ],
             [
                 'handle' => 'placeId',
                 'label' => 'Place ID',
-                'instructions' => 'The Google Place ID for the location to pull reviews from. Find yours at https://developers.google.com/maps/documentation/places/web-service/place-id.',
+                'instructions' => 'The Google Place ID for the location to pull reviews from. Use the "Find a Place ID" helper below or find yours at https://developers.google.com/maps/documentation/places/web-service/place-id.',
                 'type' => 'text',
-                'required' => true,
                 'placeholder' => 'ChIJ…',
+                'mode' => self::MODE_PLACES,
+            ],
+            // --- Business Profile API mode fields ---
+            [
+                'handle' => 'clientId',
+                'label' => 'OAuth Client ID',
+                'instructions' => 'From your Google Cloud project\'s OAuth 2.0 Client (type: Web application).',
+                'type' => 'text',
+                'secret' => true,
+                'mode' => self::MODE_BUSINESS_PROFILE,
+            ],
+            [
+                'handle' => 'clientSecret',
+                'label' => 'OAuth Client Secret',
+                'instructions' => 'From the same OAuth 2.0 Client. Treated as a secret credential.',
+                'type' => 'text',
+                'secret' => true,
+                'mode' => self::MODE_BUSINESS_PROFILE,
+            ],
+            [
+                'handle' => 'refreshToken',
+                'label' => 'Refresh Token',
+                'instructions' => 'Set by the "Connect Google account" button. Do not paste manually.',
+                'type' => 'text',
+                'secret' => true,
+                'readOnly' => true,
+                'mode' => self::MODE_BUSINESS_PROFILE,
+            ],
+            [
+                'handle' => 'locationName',
+                'label' => 'Location resource name',
+                'instructions' => 'Format: accounts/{accountId}/locations/{locationId}. After connecting, pick from the discovered list - or paste manually if you already have it.',
+                'type' => 'text',
+                'placeholder' => 'accounts/123/locations/456',
+                'mode' => self::MODE_BUSINESS_PROFILE,
             ],
         ];
     }
 
     public function testConnection(Source $source): array
     {
+        $mode = (string) ($source->settings['mode'] ?? self::MODE_PLACES);
+
+        if ($mode === self::MODE_BUSINESS_PROFILE) {
+            return $this->testBusinessProfileConnection($source);
+        }
+
         try {
             $place = $this->fetchPlace($source);
         } catch (\Throwable $e) {
@@ -99,6 +165,13 @@ class GoogleConnector extends BaseConnector
 
     public function fetchReviews(Source $source, ?\DateTimeInterface $since = null): iterable
     {
+        $mode = (string) ($source->settings['mode'] ?? self::MODE_PLACES);
+
+        if ($mode === self::MODE_BUSINESS_PROFILE) {
+            yield from $this->fetchBusinessProfileReviews($source, $since);
+            return;
+        }
+
         $place = $this->fetchPlace($source);
         $reviews = $place['reviews'] ?? [];
 
@@ -182,6 +255,142 @@ class GoogleConnector extends BaseConnector
         return $decoded;
     }
 
+    /**
+     * Pull all reviews for the configured location via Business Profile API v4.
+     * Paginates via `nextPageToken`. Each review is normalised through the
+     * same FetchedReview DTO the Places-mode path uses - so the sync service
+     * doesn't need to know which mode is in play.
+     *
+     * @return iterable<FetchedReview>
+     */
+    private function fetchBusinessProfileReviews(Source $source, ?\DateTimeInterface $since): iterable
+    {
+        $accessToken = $this->resolveAccessToken($source);
+        $location = (string) ($source->settings['locationName'] ?? '');
+        if ($location === '') {
+            throw new \RuntimeException('Business Profile source is missing a location resource name.');
+        }
+
+        $client = Craft::createGuzzleClient(['timeout' => 20]);
+        $url = self::ENDPOINT_BUSINESS_REVIEWS . $location . '/reviews';
+        $pageToken = null;
+
+        do {
+            $response = $client->request('GET', $url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Accept' => 'application/json',
+                ],
+                'query' => array_filter([
+                    'pageSize' => 50,
+                    'pageToken' => $pageToken,
+                ]),
+                'http_errors' => false,
+            ]);
+
+            $status = $response->getStatusCode();
+            $decoded = json_decode((string) $response->getBody(), true);
+            if ($status >= 400 || !is_array($decoded)) {
+                $message = $decoded['error']['message']
+                    ?? sprintf('Business Profile API returned HTTP %d.', $status);
+                throw new \RuntimeException($message);
+            }
+
+            foreach (($decoded['reviews'] ?? []) as $row) {
+                $externalId = $row['reviewId'] ?? $row['name'] ?? null;
+                if (!$externalId) continue;
+
+                $publishTime = isset($row['createTime']) ? $this->parseDate($row['createTime']) : null;
+
+                // Apply the global backfill cursor same as other connectors -
+                // Business Profile DOES paginate, so this saves API calls.
+                if ($since && $publishTime && $publishTime < $since) {
+                    return;
+                }
+
+                $starRating = $row['starRating'] ?? null;
+                $rating = match ($starRating) {
+                    'ONE' => 1.0, 'TWO' => 2.0, 'THREE' => 3.0, 'FOUR' => 4.0, 'FIVE' => 5.0,
+                    default => 0.0,
+                };
+
+                yield new FetchedReview(
+                    externalId: (string) $externalId,
+                    rating: $rating,
+                    headline: null,
+                    review: $row['comment'] ?? null,
+                    reviewerName: $row['reviewer']['displayName'] ?? null,
+                    reviewerEmail: null,
+                    reviewedAt: $publishTime,
+                    businessReply: $row['reviewReply']['comment'] ?? null,
+                    raw: $row,
+                );
+            }
+
+            $pageToken = $decoded['nextPageToken'] ?? null;
+        } while ($pageToken);
+    }
+
+    /**
+     * Cheap "is everything wired up?" probe for the Business Profile mode.
+     * Issues a single, page-size-1 request so the test doesn't drag the
+     * full review history.
+     *
+     * @return array{ok: bool, message: string}
+     */
+    private function testBusinessProfileConnection(Source $source): array
+    {
+        try {
+            $accessToken = $this->resolveAccessToken($source);
+            $location = (string) ($source->settings['locationName'] ?? '');
+            if ($location === '') {
+                return ['ok' => false, 'message' => 'Set a location resource name (accounts/.../locations/...) first.'];
+            }
+
+            $client = Craft::createGuzzleClient(['timeout' => 15]);
+            $response = $client->request('GET', self::ENDPOINT_BUSINESS_REVIEWS . $location . '/reviews', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Accept' => 'application/json',
+                ],
+                'query' => ['pageSize' => 1],
+                'http_errors' => false,
+            ]);
+            $decoded = json_decode((string) $response->getBody(), true);
+            if ($response->getStatusCode() >= 400 || !is_array($decoded)) {
+                return [
+                    'ok' => false,
+                    'message' => $decoded['error']['message'] ?? sprintf('HTTP %d from Business Profile API.', $response->getStatusCode()),
+                ];
+            }
+            $total = $decoded['totalReviewCount'] ?? null;
+            return [
+                'ok' => true,
+                'message' => sprintf('Connected. %s reviews available on this location.', $total ?? 'unknown number of'),
+            ];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Centralised access-token resolver for Business Profile calls. Reads the
+     * stored refresh token + OAuth client credentials from the source and
+     * trades them for a fresh access token.
+     */
+    private function resolveAccessToken(Source $source): string
+    {
+        $clientId = App::parseEnv((string) ($source->credentials['clientId'] ?? ''));
+        $clientSecret = App::parseEnv((string) ($source->credentials['clientSecret'] ?? ''));
+        $refreshToken = App::parseEnv((string) ($source->credentials['refreshToken'] ?? ''));
+
+        if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+            throw new \RuntimeException('Business Profile source is missing OAuth credentials. Click "Connect Google account" on the source edit page.');
+        }
+
+        return self::refreshAccessToken($clientId, $clientSecret, $refreshToken);
+    }
+
     private function parseDate(string $value): ?\DateTime
     {
         try {
@@ -189,6 +398,64 @@ class GoogleConnector extends BaseConnector
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Trade a one-shot OAuth auth code (received on the callback) for an
+     * access token + refresh token. Only the refresh token is persisted -
+     * we mint fresh access tokens for each API call via `refreshAccessToken`.
+     *
+     * @return array{access_token: string, refresh_token: string, expires_in: int}
+     * @throws \RuntimeException on token-endpoint failure
+     */
+    public static function exchangeAuthCode(string $clientId, string $clientSecret, string $code, string $redirectUri): array
+    {
+        $client = Craft::createGuzzleClient(['timeout' => 15]);
+        $response = $client->request('POST', self::OAUTH_TOKEN, [
+            'form_params' => [
+                'code' => $code,
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'grant_type' => 'authorization_code',
+            ],
+            'http_errors' => false,
+        ]);
+
+        $decoded = json_decode((string) $response->getBody(), true);
+        if (!is_array($decoded) || empty($decoded['refresh_token'])) {
+            $err = $decoded['error_description'] ?? $decoded['error'] ?? 'Unknown token-exchange error.';
+            throw new \RuntimeException($err);
+        }
+        return $decoded;
+    }
+
+    /**
+     * Mint a fresh access token from a stored refresh token. Google's tokens
+     * expire in ~60 minutes, so this runs on each API call (cheap, no caching
+     * needed for the scale Vouch operates at).
+     *
+     * @throws \RuntimeException on refresh failure (e.g. revoked grant)
+     */
+    public static function refreshAccessToken(string $clientId, string $clientSecret, string $refreshToken): string
+    {
+        $client = Craft::createGuzzleClient(['timeout' => 15]);
+        $response = $client->request('POST', self::OAUTH_TOKEN, [
+            'form_params' => [
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'refresh_token' => $refreshToken,
+                'grant_type' => 'refresh_token',
+            ],
+            'http_errors' => false,
+        ]);
+
+        $decoded = json_decode((string) $response->getBody(), true);
+        if (!is_array($decoded) || empty($decoded['access_token'])) {
+            $err = $decoded['error_description'] ?? $decoded['error'] ?? 'Could not refresh access token.';
+            throw new \RuntimeException($err);
+        }
+        return (string) $decoded['access_token'];
     }
 
     /**
