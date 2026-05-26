@@ -267,12 +267,17 @@ class Reviews extends Component
 
         if ($review->reviewerEmail) {
             $review->reviewerEmailHash = hash('sha256', strtolower(trim($review->reviewerEmail)));
-            if (!$review->reviewerUserId) {
-                $this->matchReviewerToUser($review);
-            }
         } else {
             $review->reviewerEmailHash = null;
         }
+
+        // Email-based user matching is deliberately NOT auto-applied here.
+        // For manual submissions, an anonymous attacker could otherwise forge
+        // attribution by submitting a victim's email. The sync path
+        // (`upsertFromFetched`) still calls `matchReviewerToUser` because
+        // provider emails are trusted; the front-end controller links
+        // `reviewerUserId` only when the submitter is logged in AND the
+        // submitted email matches their own Craft account.
 
         // Apply the source's moderation policy on new reviews so the
         // auto-approve threshold is respected on every path - front-end

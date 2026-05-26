@@ -22,7 +22,8 @@ class LatestReviewsWidget extends Widget
 
     public static function displayName(): string
     {
-        return Craft::t('vouch', 'Vouch - Latest Reviews');
+        $pluginName = Vouch::getInstance()->getSettings()->pluginName;
+        return Craft::t('vouch', '{plugin} - Latest Reviews', ['plugin' => $pluginName]);
     }
 
     public static function icon(): ?string

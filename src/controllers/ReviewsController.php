@@ -194,6 +194,58 @@ class ReviewsController extends Controller
         $review->reviewerName = $request->getBodyParam('reviewerName');
         $review->reviewerEmail = $request->getBodyParam('reviewerEmail');
 
+        $currentUser = Craft::$app->getUser()->getIdentity();
+        $submittedEmail = $review->reviewerEmail ? trim($review->reviewerEmail) : null;
+
+        // When `requireLoginForKnownEmails` is on, reject any submission whose
+        // email belongs to an existing Craft user unless the submitter is
+        // currently logged in as that user. Stops the spam-by-real-email
+        // attack where the attacker isn't trying to forge attribution, just
+        // to plant a victim's email on a public review.
+        if ($submittedEmail && Vouch::getInstance()->getSettings()->requireLoginForKnownEmails) {
+            $existingUser = Craft::$app->getUsers()->getUserByUsernameOrEmail($submittedEmail);
+            if ($existingUser && (!$currentUser || (int) $currentUser->id !== (int) $existingUser->id)) {
+                $loginUrl = \craft\helpers\UrlHelper::siteUrl(Craft::$app->getConfig()->getGeneral()->getLoginPath());
+                $message = Craft::t('vouch', 'That email belongs to a registered account. Please log in to leave a review.');
+
+                // Attach as a validation error on the field so Twig templates that
+                // already render `review.getErrors('reviewerEmail')` will surface
+                // it without any extra work. Flash error covers form templates
+                // that rely on session messages.
+                $review->addError('reviewerEmail', $message);
+
+                if ($request->getAcceptsJson()) {
+                    return $this->asJson([
+                        'ok' => false,
+                        'requiresLogin' => true,
+                        'loginUrl' => $loginUrl,
+                        'message' => $message,
+                        'errors' => $review->getErrors(),
+                    ])->setStatusCode(403);
+                }
+
+                Craft::$app->getSession()->setError($message);
+                Craft::$app->getUrlManager()->setRouteParams([
+                    'review' => $review,
+                    'requiresLogin' => true,
+                    'loginUrl' => $loginUrl,
+                ]);
+                return null;
+            }
+        }
+
+        // Attribution: only link the review to a Craft user when the
+        // submitter is currently logged in AND the email they submitted
+        // matches their own account. This blocks the forge-by-email attack
+        // (anonymous user submits with someone else's email to attribute
+        // the review to them).
+        if ($currentUser
+            && $submittedEmail
+            && strcasecmp($currentUser->email, $submittedEmail) === 0
+        ) {
+            $review->reviewerUserId = $currentUser->id;
+        }
+
         $relatedId = $request->getBodyParam('relatedElementId');
         if ($relatedId) {
             $review->relatedElementId = (int) $relatedId;

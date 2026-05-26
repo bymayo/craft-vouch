@@ -33,4 +33,9 @@ return [
     // this rating skip the queue. 5.0 = only perfect-score reviews are
     // auto-approved (strictest). Lower the bar if you trust the source.
     'autoApproveThreshold' => 5.0,
+
+    // Reject front-end submissions whose email belongs to an existing Craft
+    // user, unless the submitter is logged in as that user. Stops anonymous
+    // attackers from planting reviews under a real customer's email.
+    'requireLoginForKnownEmails' => true,
 ];

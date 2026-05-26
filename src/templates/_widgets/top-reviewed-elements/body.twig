@@ -1,5 +1,6 @@
 {# @var rows array #}
 {# @var elementsById \craft\base\ElementInterface[] #}
+{# @var columnLabel string #}
 
 {% if rows|length %}
     <div class="tableview vouch-widget-tableview">
@@ -7,7 +8,7 @@
             <table class="data fullwidth vouch-widget-table">
                 <thead>
                     <tr>
-                        <th>{{ 'Element'|t('vouch') }}</th>
+                        <th>{{ columnLabel }}</th>
                         <th>{{ 'Rating'|t('vouch') }}</th>
                     </tr>
                 </thead>

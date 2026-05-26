@@ -32,6 +32,7 @@ Settings live in Project Config (so they sync via `project.yaml`) and can be ove
 | `emailRetentionDays` | `365` | Days to keep reviewer emails before purging. `0` = never. |
 | `backfillDays` | `90` | Days of history to pull on a source's first sync. `0` = all. |
 | `autoApproveThreshold` | `5.0` | When a source requires manual approval, reviews at or above this rating skip the queue. |
+| `requireLoginForKnownEmails` | `true` | Reject front-end submissions whose email matches an existing Craft user, unless the submitter is logged in as that user. Blocks email-spoofed spam reviews. |
 
 ## Sync
 
@@ -110,6 +111,8 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
 ## Front-end review submissions (Manual sources only)
 
 ```twig
+{# `review` and `requiresLogin` are populated by the controller when validation
+   fails so the form re-renders with the user's input + per-field errors. #}
 <form method="post">
   {{ csrfInput() }}
   <input type="hidden" name="action" value="vouch/reviews/submit">
@@ -117,6 +120,17 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
 
   {# Optional: tie the review to a specific entry / product #}
   <input type="hidden" name="relatedElementId" value="{{ entry.id ?? '' }}">
+
+  {# Flash error banner - covers controller-level failures (e.g. unknown source). #}
+  {% set errorMsg = craft.app.session.getFlash('error') %}
+  {% if errorMsg %}
+    <p class="error" role="alert">
+      {{ errorMsg }}
+      {% if requiresLogin ?? false %}
+        <a href="{{ loginUrl ?? siteUrl('login') }}">{{ 'Log in'|t }}</a>
+      {% endif %}
+    </p>
+  {% endif %}
 
   <label for="vouch-rating">Rating *</label>
   <select id="vouch-rating" name="rating" required>
@@ -127,18 +141,23 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
     <option value="2">2 ★★</option>
     <option value="1">1 ★</option>
   </select>
+  {% for err in (review.getErrors('rating') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-headline">Headline *</label>
-  <input id="vouch-headline" name="headline" required>
+  <input id="vouch-headline" name="headline" value="{{ review.headline ?? '' }}" required>
+  {% for err in (review.getErrors('headline') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-review">Review *</label>
-  <textarea id="vouch-review" name="review" required></textarea>
+  <textarea id="vouch-review" name="review" required>{{ review.review ?? '' }}</textarea>
+  {% for err in (review.getErrors('review') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-reviewer-name">Reviewer name *</label>
-  <input id="vouch-reviewer-name" name="reviewerName" required>
+  <input id="vouch-reviewer-name" name="reviewerName" value="{{ review.reviewerName ?? '' }}" required>
+  {% for err in (review.getErrors('reviewerName') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-reviewer-email">Reviewer email *</label>
-  <input id="vouch-reviewer-email" name="reviewerEmail" type="email" required>
+  <input id="vouch-reviewer-email" name="reviewerEmail" type="email" value="{{ review.reviewerEmail ?? '' }}" required>
+  {% for err in (review.getErrors('reviewerEmail') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <button type="submit">Submit review</button>
 </form>
@@ -148,6 +167,34 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
 **Optional:** `relatedElementId` (ties the review to a specific entry / product).
 
 Submissions are only accepted against Manual sources - front-end forms can't write into API-backed sources (which would bypass the provider's own moderation).
+
+### Attribution & spam controls
+
+`reviewerEmail` is captured for moderation / contact, but Vouch will **only attribute** a review to a Craft user (`reviewerUserId`) when the submitter is logged in AND the email they submit matches the email on their own account. This blocks the forge-by-email attack where an anonymous user submits with someone else's email to attribute the review to them.
+
+Even with attribution locked down, an anonymous attacker can still *plant* a review under a real user's email - the row exists, the email is visible to admins, and depending on your retention policy it lives on the record. To stop that, turn on **`requireLoginForKnownEmails`**: when the submitted email belongs to an existing Craft user and the submitter isn't logged in as them, the controller returns `403` and your form can redirect to login.
+
+The response is JSON when `Accept: application/json` is set:
+
+```json
+{
+  "ok": false,
+  "requiresLogin": true,
+  "loginUrl": "https://example.com/login",
+  "message": "That email belongs to a registered account. Please log in to leave a review."
+}
+```
+
+For a non-JSON submit, the controller flashes an error message and sets a `requiresLogin` route param the template can read.
+
+If you want every front-end review verified before it goes live, layer on the usual defences:
+
+- Turn on **"Require manual approval"** on the source so reviews land Pending until an admin approves them.
+- Restrict the submit form to logged-in users (`{% requireLogin %}` at the top of the Twig template, or check `currentUser` before rendering the form).
+- For anonymous-allowed forms, add the usual public-form defences: a honeypot field, hCaptcha / reCAPTCHA, rate limiting (Craft's `RateLimitTrait`, a CDN rule, or the [`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) plugin), and a server-side email format check before the form even submits.
+- Use the `EVENT_AFTER_SYNC_REVIEW` hook to run your own spam scoring (Akismet, OOPSpam, etc.) and flip `$review->approved = false` for anything suspicious.
+
+The sync path (Google / Trustpilot / Feefo / Reviews.io) does still auto-match emails to Craft users - those emails come from the provider, not anonymous user input, so the same trust concern doesn't apply.
 
 ## Element-index rating column
 

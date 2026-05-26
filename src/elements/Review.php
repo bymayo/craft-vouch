@@ -119,6 +119,21 @@ class Review extends Element
         return Craft::createObject(ReviewCondition::class, [static::class]);
     }
 
+    protected static function defineActions(?string $source = null): array
+    {
+        $actions = parent::defineActions($source);
+
+        // Only surface the bulk approve when the user has permission and we're
+        // looking at a source that's likely to contain pending rows. The action
+        // itself is a no-op for already-approved reviews, but offering it on the
+        // "All reviews" / per-source views keeps the UI usable in moderation.
+        if (Craft::$app->getUser()->checkPermission('vouch-editReviews')) {
+            $actions[] = \bymayo\vouch\elements\actions\ApproveReviews::class;
+        }
+
+        return $actions;
+    }
+
     protected static function defineSources(?string $context = null): array
     {
         $sources = [

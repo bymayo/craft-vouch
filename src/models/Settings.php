@@ -44,13 +44,23 @@ class Settings extends Model
      */
     public float $autoApproveThreshold = 5.0;
 
+    /**
+     * If true, the front-end submit action rejects any submission whose
+     * `reviewerEmail` matches an existing Craft user, unless the submitter is
+     * currently logged in as that user. Stops anonymous attackers from
+     * submitting spam reviews using a real customer's email address.
+     * The controller returns a 403-style error with a `requiresLogin` flag so
+     * the form can prompt the user to log in instead.
+     */
+    public bool $requireLoginForKnownEmails = true;
+
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
         $rules[] = [['pluginName'], 'required'];
         $rules[] = [['emailRetentionDays', 'backfillDays'], 'integer', 'min' => 0];
         $rules[] = [['autoApproveThreshold'], 'number', 'min' => 0, 'max' => 5];
-        $rules[] = [['matchAuthorsToUsers'], 'boolean'];
+        $rules[] = [['matchAuthorsToUsers', 'requireLoginForKnownEmails'], 'boolean'];
         return $rules;
     }
 }

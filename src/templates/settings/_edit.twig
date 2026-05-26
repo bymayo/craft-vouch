@@ -33,6 +33,14 @@
         on: settings.matchAuthorsToUsers,
     }) }}
 
+    {{ forms.lightswitchField({
+        label: 'Require login for known emails'|t('vouch'),
+        instructions: 'Reject front-end submissions whose email belongs to an existing Craft user, unless the submitter is logged in as that user. Blocks email-spoofed spam reviews.'|t('vouch'),
+        id: 'requireLoginForKnownEmails',
+        name: 'settings[requireLoginForKnownEmails]',
+        on: settings.requireLoginForKnownEmails,
+    }) }}
+
     {{ forms.textField({
         label: 'Auto-approve threshold'|t('vouch'),
         instructions: 'Reviews at or above this rating are auto-approved.'|t('vouch'),

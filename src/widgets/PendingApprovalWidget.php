@@ -18,7 +18,8 @@ class PendingApprovalWidget extends Widget
 
     public static function displayName(): string
     {
-        return Craft::t('vouch', 'Vouch - Reviews Pending Approval');
+        $pluginName = Vouch::getInstance()->getSettings()->pluginName;
+        return Craft::t('vouch', '{plugin} - Reviews Pending Approval', ['plugin' => $pluginName]);
     }
 
     public static function icon(): ?string

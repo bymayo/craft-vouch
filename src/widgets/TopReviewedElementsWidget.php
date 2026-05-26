@@ -30,7 +30,8 @@ class TopReviewedElementsWidget extends Widget
 
     public static function displayName(): string
     {
-        return Craft::t('vouch', 'Vouch - Top reviewed elements');
+        $pluginName = Vouch::getInstance()->getSettings()->pluginName;
+        return Craft::t('vouch', '{plugin} - Top Reviewed Elements', ['plugin' => $pluginName]);
     }
 
     public static function icon(): ?string
@@ -49,16 +50,16 @@ class TopReviewedElementsWidget extends Widget
         if ($this->elementType === Entry::class && $this->sectionId) {
             $section = Craft::$app->getEntries()->getSectionById($this->sectionId);
             if ($section) {
-                return Craft::t('vouch', 'Top reviewed: {section}', ['section' => $section->name]);
+                return Craft::t('vouch', 'Top Reviewed {section}', ['section' => $section->name]);
             }
         }
 
         $label = self::elementTypeOptions()[$this->elementType] ?? null;
         if ($label) {
-            return Craft::t('vouch', 'Top reviewed: {type}', ['type' => $label]);
+            return Craft::t('vouch', 'Top Reviewed {type}', ['type' => $label]);
         }
 
-        return Craft::t('vouch', 'Top reviewed elements');
+        return Craft::t('vouch', 'Top Reviewed Elements');
     }
 
     public function getBodyHtml(): ?string
@@ -82,9 +83,15 @@ class TopReviewedElementsWidget extends Widget
             }
         }
 
+        // Singular label for the first column header ("Entry", "Product", ...).
+        $columnLabel = ($this->elementType && class_exists($this->elementType))
+            ? $this->elementType::displayName()
+            : Craft::t('vouch', 'Element');
+
         return Craft::$app->getView()->renderTemplate('vouch/_widgets/top-reviewed-elements/body', [
             'rows' => $rows,
             'elementsById' => $elementsById,
+            'columnLabel' => $columnLabel,
         ], \craft\web\View::TEMPLATE_MODE_CP);
     }
 
