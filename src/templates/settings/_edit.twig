@@ -73,4 +73,26 @@
         size: 5,
         errors: settings.getErrors('backfillDays'),
     }) }}
+
+    {{ forms.textField({
+        label: 'Headline max length'|t('vouch'),
+        instructions: 'Maximum characters allowed for a review headline. 0 = no limit.'|t('vouch'),
+        id: 'headlineMaxLength',
+        name: 'settings[headlineMaxLength]',
+        value: settings.headlineMaxLength,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('headlineMaxLength'),
+    }) }}
+
+    {{ forms.textField({
+        label: 'Review max length'|t('vouch'),
+        instructions: 'Maximum characters allowed for the review body. 0 = no limit.'|t('vouch'),
+        id: 'reviewMaxLength',
+        name: 'settings[reviewMaxLength]',
+        value: settings.reviewMaxLength,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('reviewMaxLength'),
+    }) }}
 {% endblock %}

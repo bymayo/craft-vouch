@@ -38,4 +38,9 @@ return [
     // user, unless the submitter is logged in as that user. Stops anonymous
     // attackers from planting reviews under a real customer's email.
     'requireLoginForKnownEmails' => true,
+
+    // Max characters allowed in the headline / review body for manually-
+    // submitted reviews. Synced provider data is exempt. 0 disables the cap.
+    'headlineMaxLength' => 120,
+    'reviewMaxLength' => 2000,
 ];

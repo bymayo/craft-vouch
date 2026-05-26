@@ -17,7 +17,9 @@
                     {% for review in reviews %}
                         {% set reviewerUser = review.getReviewerUser() %}
                         <tr>
-                            <td><a href="{{ review.cpEditUrl }}">{{ review.getUiLabel() }}</a></td>
+                            <td class="vouch-widget-truncate" title="{{ review.getUiLabel() }}">
+                                <a href="{{ review.cpEditUrl }}">{{ review.getUiLabel() }}</a>
+                            </td>
                             <td>{{ review.rating }} ★</td>
                             <td class="light">
                                 {% if reviewerUser %}
@@ -49,5 +51,17 @@
         margin: 20px -24px 0;
         padding: 20px 24px 0;
         border-top: 1px solid var(--hairline-color);
+    }
+    .vouch-widget-table td.vouch-widget-truncate {
+        max-width: 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .vouch-widget-table td.vouch-widget-truncate a {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 {% endcss %}

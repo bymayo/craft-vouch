@@ -33,6 +33,8 @@ Settings live in Project Config (so they sync via `project.yaml`) and can be ove
 | `backfillDays` | `90` | Days of history to pull on a source's first sync. `0` = all. |
 | `autoApproveThreshold` | `5.0` | When a source requires manual approval, reviews at or above this rating skip the queue. |
 | `requireLoginForKnownEmails` | `true` | Reject front-end submissions whose email matches an existing Craft user, unless the submitter is logged in as that user. Blocks email-spoofed spam reviews. |
+| `headlineMaxLength` | `120` | Max characters allowed in a manual review's headline. `0` disables. Synced provider data is exempt. |
+| `reviewMaxLength` | `2000` | Max characters allowed in a manual review body. `0` disables. Synced provider data is exempt. |
 
 ## Sync
 
@@ -113,6 +115,8 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
 ```twig
 {# `review` and `requiresLogin` are populated by the controller when validation
    fails so the form re-renders with the user's input + per-field errors. #}
+{% set vouchSettings = craft.app.plugins.getPlugin('vouch').getSettings() %}
+
 <form method="post">
   {{ csrfInput() }}
   <input type="hidden" name="action" value="vouch/reviews/submit">
@@ -144,11 +148,13 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
   {% for err in (review.getErrors('rating') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-headline">Headline *</label>
-  <input id="vouch-headline" name="headline" value="{{ review.headline ?? '' }}" required>
+  <input id="vouch-headline" name="headline" value="{{ review.headline ?? '' }}"
+         {% if vouchSettings.headlineMaxLength > 0 %}maxlength="{{ vouchSettings.headlineMaxLength }}"{% endif %} required>
   {% for err in (review.getErrors('headline') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-review">Review *</label>
-  <textarea id="vouch-review" name="review" required>{{ review.review ?? '' }}</textarea>
+  <textarea id="vouch-review" name="review"
+            {% if vouchSettings.reviewMaxLength > 0 %}maxlength="{{ vouchSettings.reviewMaxLength }}"{% endif %} required>{{ review.review ?? '' }}</textarea>
   {% for err in (review.getErrors('review') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="vouch-reviewer-name">Reviewer name *</label>

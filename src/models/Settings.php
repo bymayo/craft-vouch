@@ -54,11 +54,23 @@ class Settings extends Model
      */
     public bool $requireLoginForKnownEmails = true;
 
+    /**
+     * Maximum length of the review headline. Enforced as a validation rule on
+     * the Review element so it applies to every save path (front-end submit,
+     * CP authoring, sync). Set to 0 to disable the limit.
+     */
+    public int $headlineMaxLength = 120;
+
+    /**
+     * Maximum length of the review body. Set to 0 to disable.
+     */
+    public int $reviewMaxLength = 2000;
+
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
         $rules[] = [['pluginName'], 'required'];
-        $rules[] = [['emailRetentionDays', 'backfillDays'], 'integer', 'min' => 0];
+        $rules[] = [['emailRetentionDays', 'backfillDays', 'headlineMaxLength', 'reviewMaxLength'], 'integer', 'min' => 0];
         $rules[] = [['autoApproveThreshold'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['matchAuthorsToUsers', 'requireLoginForKnownEmails'], 'boolean'];
         return $rules;

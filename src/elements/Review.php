@@ -347,16 +347,29 @@ class Review extends Element
         $rules[] = [['approved'], 'boolean'];
         $rules[] = [['externalId'], 'string', 'max' => 255];
 
+        // Length caps from plugin settings - applied to every save path.
+        // `max=0` disables the limit. Synced reviews are exempt by the same
+        // logic as the required-fields rule below: providers control payload
+        // length and we don't want to reject their data after the fact.
+        $settings = Vouch::getInstance()->getSettings();
+        $manualOnly = function($model) {
+            $source = $model->getSource();
+            return $source !== null && $source->providerHandle === 'manual';
+        };
+        if ($settings->headlineMaxLength > 0) {
+            $rules[] = [['headline'], 'string', 'max' => $settings->headlineMaxLength, 'when' => $manualOnly];
+        }
+        if ($settings->reviewMaxLength > 0) {
+            $rules[] = [['review'], 'string', 'max' => $settings->reviewMaxLength, 'when' => $manualOnly];
+        }
+
         // Manual reviews require these fields too. Synced reviews are
         // exempt - providers don't always supply headline/email/etc. and we
         // don't want a strict server-side check to reject API payloads.
         $rules[] = [
             ['headline', 'review', 'reviewerName', 'reviewerEmail', 'reviewedAt'],
             'required',
-            'when' => function($model) {
-                $source = $model->getSource();
-                return $source !== null && $source->providerHandle === 'manual';
-            },
+            'when' => $manualOnly,
         ];
 
         return $rules;
