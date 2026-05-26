@@ -7,7 +7,7 @@
 {% extends '_layouts/cp' %}
 {% import '_includes/forms' as forms %}
 
-{# Existing reviews are read-only across the board — content is fixed once
+{# Existing reviews are read-only across the board - content is fixed once
    saved (synced reviews would be overwritten anyway, manual reviews stay
    immutable for audit consistency). #}
 {% set isReadOnly = review.id ? true : false %}
@@ -97,7 +97,7 @@
         disabled: isReadOnly,
     }) }}
 
-    {# Related element — type dropdown drives which element-select is shown. #}
+    {# Related element - type dropdown drives which element-select is shown. #}
     {% set elementTypeOptions = [
         { value: 'craft\\elements\\Entry', label: 'Entry'|t('vouch') },
         { value: 'craft\\elements\\Asset', label: 'Asset'|t('vouch') },
@@ -161,7 +161,7 @@
 {% endblock %}
 
 {% block details %}
-    {# Right-side metadata sidebar — mirrors how Craft renders Entries,
+    {# Right-side metadata sidebar - mirrors how Craft renders Entries,
        Categories etc. with status / dates / related entities on the right. #}
     <div id="meta-details" class="meta">
         {% if not review.id %}
@@ -186,7 +186,7 @@
                     {% if review.getSource() %}
                         <a href="{{ url('vouch/sources/' ~ review.getSource().id) }}">{{ review.getSource().name }}</a>
                     {% else %}
-                        <span class="light">—</span>
+                        <span class="light">-</span>
                     {% endif %}
                 </div>
             </div>

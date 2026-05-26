@@ -49,7 +49,7 @@ class ProviderConditionRule extends BaseMultiSelectConditionRule implements Elem
             ->from('{{%vouch_sources}}')
             ->where(['providerHandle' => $providers])
             ->column();
-        /** @phpstan-ignore-next-line — `sourceId()` is defined on ReviewQuery */
+        /** @phpstan-ignore-next-line - `sourceId()` is defined on ReviewQuery */
         $query->sourceId($sourceIds ?: [0]);
     }
 
@@ -59,7 +59,7 @@ class ProviderConditionRule extends BaseMultiSelectConditionRule implements Elem
         if (empty($providers)) {
             return true;
         }
-        /** @phpstan-ignore-next-line — `getSource()` is defined on Review */
+        /** @phpstan-ignore-next-line - `getSource()` is defined on Review */
         $source = $element->getSource();
         return $source !== null && in_array($source->providerHandle, $providers, true);
     }

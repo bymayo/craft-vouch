@@ -1,0 +1,61 @@
+{# @var widget \bymayo\vouch\widgets\TopReviewedElementsWidget #}
+{# @var elementTypeOptions array #}
+{# @var sectionOptions array #}
+{# @var sortOptions array #}
+{# @var entryClass string #}
+{% import '_includes/forms' as forms %}
+
+{{ forms.selectField({
+    label: 'Element type'|t('vouch'),
+    id: 'elementType',
+    name: 'elementType',
+    value: widget.elementType,
+    options: elementTypeOptions,
+    toggle: true,
+    targets: 'vouch-section-row',
+}) }}
+
+{# Section only applies to Entries. Toggle visibility on element-type
+   change so it disappears for Assets/Categories/Users/Products. #}
+<div id="vouch-section-row"{% if widget.elementType != entryClass %} class="hidden"{% endif %}>
+    {{ forms.selectField({
+        label: 'Section'|t('vouch'),
+        id: 'sectionId',
+        name: 'sectionId',
+        value: widget.sectionId,
+        options: sectionOptions,
+    }) }}
+</div>
+
+{{ forms.selectField({
+    label: 'Sort by'|t('vouch'),
+    id: 'sort',
+    name: 'sort',
+    value: widget.sort,
+    options: sortOptions,
+}) }}
+
+{{ forms.textField({
+    label: 'Limit'|t('vouch'),
+    id: 'limit',
+    name: 'limit',
+    value: widget.limit,
+    type: 'number',
+    min: 1,
+    max: 50,
+}) }}
+
+{% js %}
+(function() {
+    var typeSelect = document.getElementById('{{ widget.id ?? '' }}elementType') || document.getElementById('elementType');
+    var sectionRow = document.getElementById('vouch-section-row');
+    if (!typeSelect || !sectionRow) return;
+    typeSelect.addEventListener('change', function() {
+        if (typeSelect.value === '{{ entryClass|e('js') }}') {
+            sectionRow.classList.remove('hidden');
+        } else {
+            sectionRow.classList.add('hidden');
+        }
+    });
+})();
+{% endjs %}

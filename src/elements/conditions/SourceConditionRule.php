@@ -34,7 +34,7 @@ class SourceConditionRule extends BaseMultiSelectConditionRule implements Elemen
     {
         $values = array_map('intval', (array) $this->getValues());
         if (!empty($values)) {
-            /** @phpstan-ignore-next-line — `sourceId()` is defined on ReviewQuery */
+            /** @phpstan-ignore-next-line - `sourceId()` is defined on ReviewQuery */
             $query->sourceId($values);
         }
     }
@@ -45,7 +45,7 @@ class SourceConditionRule extends BaseMultiSelectConditionRule implements Elemen
         if (empty($values)) {
             return true;
         }
-        /** @phpstan-ignore-next-line — `sourceId` is defined on Review */
+        /** @phpstan-ignore-next-line - `sourceId` is defined on Review */
         return in_array((string) $element->sourceId, $values, true);
     }
 }

@@ -38,7 +38,7 @@ interface ConnectorInterface
     public static function icon(): ?string;
 
     /**
-     * Capability flags this provider supports — pull/push/invite. Drives which
+     * Capability flags this provider supports - pull/push/invite. Drives which
      * UI affordances are shown for sources using this provider.
      *
      * @return array<string, bool>

@@ -7,7 +7,7 @@ use bymayo\vouch\models\Source;
 use yii\base\Event;
 
 /**
- * Fired when a review transitions to the approved state — either because it
+ * Fired when a review transitions to the approved state - either because it
  * was auto-approved on first sync (no moderation required, or `minRating`
  * threshold met) or because an admin clicked the approve button.
  *

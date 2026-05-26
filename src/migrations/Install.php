@@ -16,7 +16,7 @@ class Install extends Migration
             'enabled' => $this->boolean()->notNull()->defaultValue(true),
             // Provider-specific settings (non-secret), JSON-encoded.
             'settings' => $this->text(),
-            // Credentials column — encrypted at the application layer before
+            // Credentials column - encrypted at the application layer before
             // insert/update (see Sources service). Never read directly outside
             // the service.
             'credentials' => $this->text(),

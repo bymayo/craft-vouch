@@ -8,7 +8,7 @@ use craft\helpers\Db;
 /**
  * Query class for `Review` elements. Adds the joined `vouch_reviews` columns
  * and a handful of common filters so element queries from Twig / PHP feel
- * natural — `craft.vouch.reviews().rating(4).source('google-uk').all()`.
+ * natural - `craft.vouch.reviews().rating(4).source('google-uk').all()`.
  */
 class ReviewQuery extends ElementQuery
 {

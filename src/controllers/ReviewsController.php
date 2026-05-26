@@ -15,7 +15,7 @@ use yii\web\Response;
 class ReviewsController extends Controller
 {
     /**
-     * Only `submit` is anonymous — it's the public front-end form action.
+     * Only `submit` is anonymous - it's the public front-end form action.
      * Everything else requires `vouch-viewReviews` (gated in beforeAction).
      */
     protected array|int|bool $allowAnonymous = ['submit'];
@@ -45,7 +45,7 @@ class ReviewsController extends Controller
                 }
             } else {
                 // New review: we can only create against a Manual source.
-                // If none exist, send the user to create one — the empty
+                // If none exist, send the user to create one - the empty
                 // form would have no source to attach to.
                 $manualSources = $vouch->sources->getSourcesByProvider(ManualConnector::handle());
                 if (empty($manualSources)) {
@@ -152,7 +152,7 @@ class ReviewsController extends Controller
 
     /**
      * Public, anonymous-allowed action for front-end review forms.
-     * Reviews are only accepted against a Manual source — API-backed sources
+     * Reviews are only accepted against a Manual source - API-backed sources
      * have their reviews flow from the provider, not user submissions.
      *
      * Example Twig:
@@ -187,10 +187,6 @@ class ReviewsController extends Controller
         }
 
         $review = $vouch->reviews->newManualReview($source);
-        // Force approval through the source's moderation policy. Front-end
-        // input never bypasses `requiresApproval`, regardless of what the
-        // controller's `populateFromRequest()` writes onto `approved`.
-        $review->approved = !$source->requiresApproval;
 
         $review->rating = (float) $request->getBodyParam('rating', 0);
         $review->headline = $request->getBodyParam('headline');
@@ -225,7 +221,7 @@ class ReviewsController extends Controller
     /**
      * Map request body fields onto the review element. Used by `actionSave`
      * for both new + edit. Re-syncing an API review will overwrite anything
-     * edited here — the form warns the user about that.
+     * edited here - the form warns the user about that.
      */
     private function populateFromRequest(Review $review, \craft\web\Request $request): void
     {

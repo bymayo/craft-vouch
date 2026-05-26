@@ -6,7 +6,7 @@ use bymayo\vouch\connectors\BaseConnector;
 use bymayo\vouch\models\Source;
 
 /**
- * Manual connector — the no-API provider.
+ * Manual connector - the no-API provider.
  *
  * A "manual" source is a real Source row with all the usual moderation,
  * scheduling, and Points-trigger behaviour, but no third-party API behind
@@ -15,12 +15,12 @@ use bymayo\vouch\models\Source;
  *
  *  - `sourceId` stays required on every review (dedup index still works,
  *    Points trigger still has a source on the payload).
- *  - Different manual sources can exist for different use cases — "Phone
- *    support feedback", "Beta tester reviews", "In-store kiosk" — each
+ *  - Different manual sources can exist for different use cases - "Phone
+ *    support feedback", "Beta tester reviews", "In-store kiosk" - each
  *    with its own moderation settings and target element.
  *
  * `fetchReviews()` is a no-op so scheduled syncs walking enabled sources
- * cleanly skip these. `testConnection()` always succeeds — there's nothing
+ * cleanly skip these. `testConnection()` always succeeds - there's nothing
  * to test, and surfacing that helps disambiguate "haven't configured
  * anything yet" from "API is broken".
  */
@@ -59,7 +59,7 @@ class ManualConnector extends BaseConnector
     {
         return [
             'ok' => true,
-            'message' => 'Manual sources don’t need an API connection — reviews are authored directly in Craft.',
+            'message' => 'Manual sources don’t need an API connection - reviews are authored directly in Craft.',
         ];
     }
 

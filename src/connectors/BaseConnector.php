@@ -4,7 +4,7 @@ namespace bymayo\vouch\connectors;
 
 /**
  * Convenience base class. Connectors can extend this to inherit sensible
- * defaults — null icon, pull-only capability set, empty settings schema — and
+ * defaults - null icon, pull-only capability set, empty settings schema - and
  * override only what they need. Pure implementations of ConnectorInterface
  * are still welcome.
  */
@@ -20,7 +20,7 @@ abstract class BaseConnector implements ConnectorInterface
     }
 
     /**
-     * Helper for connector subclasses — loads the SVG markup for a brand
+     * Helper for connector subclasses - loads the SVG markup for a brand
      * logo stored in `src/resources/icons/<name>.svg`. Centralises the path
      * resolution so each connector only has to know its filename.
      */

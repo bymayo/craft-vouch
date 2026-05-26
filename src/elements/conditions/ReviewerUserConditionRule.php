@@ -35,7 +35,7 @@ class ReviewerUserConditionRule extends BaseElementSelectConditionRule implement
     {
         $ids = $this->getElementIds();
         if (!empty($ids)) {
-            /** @phpstan-ignore-next-line — `reviewerUserId()` is defined on ReviewQuery */
+            /** @phpstan-ignore-next-line - `reviewerUserId()` is defined on ReviewQuery */
             $query->reviewerUserId($ids[0]);
         }
     }
@@ -46,7 +46,7 @@ class ReviewerUserConditionRule extends BaseElementSelectConditionRule implement
         if (empty($ids)) {
             return true;
         }
-        /** @phpstan-ignore-next-line — `reviewerUserId` is defined on Review */
+        /** @phpstan-ignore-next-line - `reviewerUserId` is defined on Review */
         return (int) $element->reviewerUserId === (int) $ids[0];
     }
 }

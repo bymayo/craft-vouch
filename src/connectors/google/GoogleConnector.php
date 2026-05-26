@@ -10,7 +10,7 @@ use craft\helpers\App;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * Google Reviews connector — Places API (New).
+ * Google Reviews connector - Places API (New).
  *
  * Notes / known limits:
  *
@@ -22,7 +22,7 @@ use GuzzleHttp\Exception\GuzzleException;
  *    the dedup layer ignore ones we've already stored.
  *  - Google doesn't expose reviewer email addresses, so `reviewerEmail` is
  *    always null. That means the Points "match by email" path won't fire for
- *    Google reviews — by design, not a bug.
+ *    Google reviews - by design, not a bug.
  *  - Auth is a simple API key. The key needs the Places API (New) enabled
  *    and, for production, an HTTP referrer or IP restriction.
  *
@@ -88,7 +88,7 @@ class GoogleConnector extends BaseConnector
         return [
             'ok' => true,
             'message' => sprintf(
-                'Connected to %s — %s★ from %s reviewers.',
+                'Connected to %s - %s★ from %s reviewers.',
                 $name,
                 $rating !== null ? number_format((float) $rating, 1) : '–',
                 $count ?? '–',

@@ -28,8 +28,8 @@ class SourcesController extends Controller
 
     /**
      * JSON endpoint backing the Vue admin table on the sources index.
-     * Same shape as Craft's built-in admin tables — `pagination` block +
-     * `data` array — so the front-end `Craft.VueAdminTable` widget can
+     * Same shape as Craft's built-in admin tables - `pagination` block +
+     * `data` array - so the front-end `Craft.VueAdminTable` widget can
      * render, sort, search, and delete rows without any custom JS here.
      */
     public function actionTableData(): Response
@@ -64,12 +64,12 @@ class SourcesController extends Controller
             $isManual = $source->providerHandle === 'manual';
             $isPullable = $connector && !$isManual;
 
-            // Live connection chip — JS picks these up after the table
+            // Live connection chip - JS picks these up after the table
             // renders and replaces "Checking…" with the actual state.
             // Em-dash for non-pullable / disabled sources so the column
             // stays readable.
             if (!$isPullable || !$source->enabled) {
-                $connectionHtml = '<span class="light">—</span>';
+                $connectionHtml = '<span class="light">-</span>';
             } else {
                 $connectionHtml = sprintf(
                     '<span class="vouch-connection-status" data-source-id="%d" data-pending="1">' .
@@ -90,7 +90,7 @@ class SourcesController extends Controller
             // and disabled sources show an em-dash placeholder so the
             // column width stays stable across rows.
             if (!$isPullable || !$source->enabled) {
-                $syncHtml = '<span class="light">—</span>';
+                $syncHtml = '<span class="light">-</span>';
             } else {
                 $syncHtml = sprintf(
                     '<form method="post" style="margin:0; display:inline-block;">' .
@@ -112,7 +112,7 @@ class SourcesController extends Controller
                 'url' => UrlHelper::cpUrl('vouch/sources/' . $source->id),
                 'handle' => $source->handle,
                 // VueAdminTable reads `status` as a BOOLEAN (not a colour
-                // string) — truthy = green "enabled" dot, falsy = hollow.
+                // string) - truthy = green "enabled" dot, falsy = hollow.
                 // Same convention as Craft's own settings indexes.
                 'status' => $source->enabled,
                 'provider' => $connector ? $connector::displayName() : $source->providerHandle,
@@ -151,7 +151,7 @@ class SourcesController extends Controller
             return $this->redirect('vouch/sources');
         }
 
-        // New source landing on /sources/new without a provider param —
+        // New source landing on /sources/new without a provider param -
         // default to the first available so the form has something to
         // render. The user can switch via the dropdown.
         if (!$source->id && !$source->providerHandle) {
@@ -164,7 +164,7 @@ class SourcesController extends Controller
         }
 
         // Pre-compute every provider's schema so the template can render
-        // a block per provider — JS shows/hides based on the dropdown.
+        // a block per provider - JS shows/hides based on the dropdown.
         $schemas = [];
         foreach ($providers as $handle => $p) {
             $schemas[$handle] = $p::settingsSchema();

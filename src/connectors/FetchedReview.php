@@ -6,7 +6,7 @@ namespace bymayo\vouch\connectors;
  * Provider-agnostic DTO produced by a connector's `fetchReviews()`. The sync
  * service maps this onto a `Review` element, deduplicating by
  * `(sourceId, externalId)`. Everything except `externalId` and `rating` is
- * optional — providers vary wildly in what they expose.
+ * optional - providers vary wildly in what they expose.
  */
 final class FetchedReview
 {
@@ -22,7 +22,7 @@ final class FetchedReview
         public readonly ?\DateTimeInterface $reviewedAt = null,
         /** Optional business reply, if the provider returned one. */
         public readonly ?string $businessReply = null,
-        /** Provider's full raw payload for this review — stored for forensics. */
+        /** Provider's full raw payload for this review - stored for forensics. */
         public readonly array $raw = [],
     ) {
     }

@@ -9,16 +9,21 @@ use bymayo\vouch\models\Source;
 use bymayo\vouch\Vouch;
 
 /**
- * Twig API for Vouch — exposed as `craft.vouch.*`.
+ * Twig API for Vouch - exposed as `craft.vouch.*`.
  *
  *  {% set best = craft.vouch.reviews().approved(true).rating('>= 4').all() %}
  */
 class VouchVariable
 {
-    /** Returns a chainable Review query — same shape as `craft.entries()` etc. */
+    /**
+     * Returns a chainable Review query - same shape as `craft.entries()` etc.
+     * Defaults to approved-only so pending-moderation reviews never leak onto
+     * the front-end. Pass `.approved(false)` (or `.approved(null)` for both)
+     * to opt out.
+     */
     public function reviews(): ReviewQuery
     {
-        return Review::find();
+        return Review::find()->approved(true);
     }
 
     public function review(?int $id): ?Review

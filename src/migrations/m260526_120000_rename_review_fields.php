@@ -27,7 +27,7 @@ class m260526_120000_rename_review_fields extends Migration
         $table = '{{%vouch_reviews}}';
 
         // Drop the FK + indices that reference the columns we're about to
-        // rename — Postgres and MySQL both refuse renames while indexed.
+        // rename - Postgres and MySQL both refuse renames while indexed.
         \craft\helpers\MigrationHelper::dropForeignKeyIfExists($table, ['authorUserId'], $this);
         \craft\helpers\MigrationHelper::dropIndexIfExists($table, ['authorEmailHash'], false, $this);
         \craft\helpers\MigrationHelper::dropIndexIfExists($table, ['authorUserId'], false, $this);

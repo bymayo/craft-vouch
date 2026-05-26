@@ -1,0 +1,52 @@
+{# @var rows array #}
+{# @var elementsById \craft\base\ElementInterface[] #}
+
+{% if rows|length %}
+    <div class="tableview vouch-widget-tableview">
+        <div class="tablepane">
+            <table class="data fullwidth vouch-widget-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'Element'|t('vouch') }}</th>
+                        <th>{{ 'Rating'|t('vouch') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set element = elementsById[row.elementId] ?? null %}
+                        <tr>
+                            <td>
+                                {% if element and element.cpEditUrl %}
+                                    <a href="{{ element.cpEditUrl }}">{{ element.title ?: element.uiLabel }}</a>
+                                {% elseif element %}
+                                    {{ element.title ?: element.uiLabel }}
+                                {% else %}
+                                    <span class="light">#{{ row.elementId }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ row.average|number_format(1) }} ★
+                                <span class="light">({{ row.count }} {{ row.count == 1 ? 'review'|t('vouch') : 'reviews'|t('vouch') }})</span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="vouch-widget-footer">
+        <a class="btn small" href="{{ cpUrl('vouch/reviews') }}">{{ 'View all reviews'|t('vouch') }}</a>
+    </div>
+{% else %}
+    <p>{{ 'No reviewed elements yet.'|t('vouch') }}</p>
+{% endif %}
+
+{% css %}
+    .vouch-widget-tableview { padding-top: 24px; }
+    .vouch-widget-footer {
+        margin: 20px -24px 0;
+        padding: 20px 24px 0;
+        border-top: 1px solid var(--hairline-color);
+    }
+{% endcss %}

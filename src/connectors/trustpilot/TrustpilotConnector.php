@@ -9,12 +9,12 @@ use Craft;
 use craft\helpers\App;
 
 /**
- * Trustpilot connector — public Business Units API.
+ * Trustpilot connector - public Business Units API.
  *
  * v1 uses the public read endpoint with API-key auth, which exposes the same
  * review feed visible on the company's Trustpilot page. The richer private
  * endpoints (replies, invitation status, consumer email) require OAuth and a
- * verified business agreement — that's Phase 6 (push) territory.
+ * verified business agreement - that's Phase 6 (push) territory.
  *
  *  - Auth: `apikey` query param. Keys are issued from the Trustpilot Business
  *    portal under Integrations → API Access.
@@ -22,7 +22,7 @@ use craft\helpers\App;
  *    than `perPage` reviews.
  *  - `consumer.email` is **not** returned by the public API. User-matching
  *    won't fire for Trustpilot reviews unless the consumer also happens to
- *    register on the Craft site with the same display name (it won't —
+ *    register on the Craft site with the same display name (it won't -
  *    don't rely on it).
  *
  * @see https://developers.trustpilot.com/business-units-api

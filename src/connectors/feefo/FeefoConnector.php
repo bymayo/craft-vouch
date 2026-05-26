@@ -9,7 +9,7 @@ use Craft;
 use craft\helpers\App;
 
 /**
- * Feefo connector — Reviews API v20.
+ * Feefo connector - Reviews API v20.
  *
  * Feefo's public read API uses a merchant identifier (the "merchant_identifier"
  * value on your Feefo dashboard) as the only required parameter. An API key
@@ -21,7 +21,7 @@ use craft\helpers\App;
  *  - Pagination: `page_size` + `page_number`. The response's `pagination`
  *    block tells us the total page count.
  *  - Each Feefo "review" can contain BOTH a service review and one or more
- *    product reviews. v1 surfaces the service review only — products will
+ *    product reviews. v1 surfaces the service review only - products will
  *    land in Phase 3.1 when we add per-review element relations.
  *  - Ratings are typically on a 0–5 scale; we trust the `rating.rating`
  *    field and clamp at 5 for safety.
@@ -106,7 +106,7 @@ class FeefoConnector extends BaseConnector
             foreach ($reviews as $row) {
                 $service = $row['service'] ?? null;
                 if (!$service) {
-                    // Pure product-review row — defer to Phase 3.1.
+                    // Pure product-review row - defer to Phase 3.1.
                     continue;
                 }
 

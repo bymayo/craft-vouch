@@ -1,0 +1,46 @@
+{# @var reviews \bymayo\vouch\elements\Review[] #}
+{# @var indexUrl string #}
+
+{% if reviews|length %}
+    <div class="tableview vouch-widget-tableview">
+        <div class="tablepane">
+            <table class="data fullwidth vouch-widget-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'Review'|t('vouch') }}</th>
+                        <th class="thin">{{ 'Rating'|t('vouch') }}</th>
+                        <th>{{ 'Reviewer'|t('vouch') }}</th>
+                        <th>{{ 'Date'|t('vouch') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in reviews %}
+                        <tr>
+                            <td><a href="{{ review.cpEditUrl }}">{{ review.getUiLabel() }}</a></td>
+                            <td>{{ review.rating }} ★</td>
+                            <td class="light">{{ review.reviewerName ?: '-' }}</td>
+                            <td class="light" title="{{ review.reviewedAt ? review.reviewedAt|datetime('short') : '' }}">
+                                {{ review.reviewedAt ? craft.app.formatter.asRelativeTime(review.reviewedAt) : '-' }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="vouch-widget-footer">
+        <a class="btn small" href="{{ indexUrl }}">{{ 'View all pending reviews'|t('vouch') }}</a>
+    </div>
+{% else %}
+    <p>{{ 'No reviews are awaiting approval.'|t('vouch') }}</p>
+{% endif %}
+
+{% css %}
+    .vouch-widget-tableview { padding-top: 24px; }
+    .vouch-widget-footer {
+        margin: 20px -24px 0;
+        padding: 20px 24px 0;
+        border-top: 1px solid var(--hairline-color);
+    }
+{% endcss %}

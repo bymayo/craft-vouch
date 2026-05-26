@@ -13,12 +13,13 @@ use craft\elements\conditions\ElementConditionInterface;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
 use craft\helpers\Cp;
+use craft\helpers\Db;
 use craft\helpers\Html;
 use craft\helpers\UrlHelper;
 
 /**
- * A normalised review from any provider. Reviews are not user-content —
- * end-users in the CP don't author them — so this element has no Title field,
+ * A normalised review from any provider. Reviews are not user-content -
+ * end-users in the CP don't author them - so this element has no Title field,
  * no URL, and no localisation. Statuses model approval state:
  * `live` = approved & visible; `pending` = awaiting moderation.
  */
@@ -99,7 +100,7 @@ class Review extends Element
     {
         return [
             self::STATUS_LIVE => Craft::t('vouch', 'Live'),
-            self::STATUS_PENDING => Craft::t('vouch', 'Pending approval'),
+            self::STATUS_PENDING => Craft::t('vouch', 'Pending Approval'),
         ];
     }
 
@@ -129,7 +130,7 @@ class Review extends Element
             ],
             [
                 'key' => 'pending',
-                'label' => Craft::t('vouch', 'Pending approval'),
+                'label' => Craft::t('vouch', 'Pending Approval'),
                 'criteria' => ['approved' => false],
                 'defaultSort' => ['reviewedAt', 'desc'],
             ],
@@ -202,6 +203,24 @@ class Review extends Element
         return $this->_source;
     }
 
+    /** Convenience for Twig: `review.sourceName`. */
+    public function getSourceName(): ?string
+    {
+        return $this->getSource()?->name;
+    }
+
+    /** Convenience for Twig: `review.sourceHandle`. */
+    public function getSourceHandle(): ?string
+    {
+        return $this->getSource()?->handle;
+    }
+
+    /** Convenience for Twig: `review.providerHandle` (google, trustpilot, ...). */
+    public function getProviderHandle(): ?string
+    {
+        return $this->getSource()?->providerHandle;
+    }
+
     public function getReviewerUser(): ?User
     {
         if ($this->_user === null && $this->reviewerUserId) {
@@ -235,7 +254,7 @@ class Review extends Element
         if ($this->headline) {
             return $this->headline;
         }
-        // Google reviews don't carry a headline — fall back to a review snippet
+        // Google reviews don't carry a headline - fall back to a review snippet
         // so the row reads as the actual review ("I loved this product")
         // rather than an opaque "Review #2082".
         if ($this->review) {
@@ -314,7 +333,7 @@ class Review extends Element
         $rules[] = [['externalId'], 'string', 'max' => 255];
 
         // Manual reviews require these fields too. Synced reviews are
-        // exempt — providers don't always supply headline/email/etc. and we
+        // exempt - providers don't always supply headline/email/etc. and we
         // don't want a strict server-side check to reject API payloads.
         $rules[] = [
             ['headline', 'review', 'reviewerName', 'reviewerEmail', 'reviewedAt'],
@@ -342,9 +361,7 @@ class Review extends Element
                 'reviewerEmailHash' => $this->reviewerEmailHash,
                 'reviewerUserId' => $this->reviewerUserId,
                 'relatedElementId' => $this->relatedElementId,
-                'reviewedAt' => $this->reviewedAt
-                    ? $this->reviewedAt->format('Y-m-d H:i:s')
-                    : null,
+                'reviewedAt' => Db::prepareDateForDb($this->reviewedAt),
                 'businessReply' => $this->businessReply,
                 'raw' => $this->raw,
                 'approved' => $this->approved,

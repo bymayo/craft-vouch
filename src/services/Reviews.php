@@ -15,7 +15,7 @@ use craft\helpers\StringHelper;
 use yii\base\Component;
 
 /**
- * Domain logic for `Review` elements — upserting from a `FetchedReview` DTO,
+ * Domain logic for `Review` elements - upserting from a `FetchedReview` DTO,
  * applying moderation rules, and matching authors to Craft users.
  *
  * This service is intentionally connector-agnostic: it never knows about
@@ -28,7 +28,7 @@ class Reviews extends Component
     public const EVENT_AFTER_SYNC_REVIEW = 'afterSyncReview';
 
     /**
-     * Fired the first time a review becomes approved — once per review,
+     * Fired the first time a review becomes approved - once per review,
      * never re-fires on re-sync.
      */
     public const EVENT_AFTER_APPROVE_REVIEW = 'afterApproveReview';
@@ -107,6 +107,58 @@ class Reviews extends Component
     }
 
     /**
+     * Aggregate approved reviews grouped by `relatedElementId`, joined to
+     * `{{%elements}}` so we can filter by element type and optionally by
+     * an entry section. Used by the "Top reviewed elements" dashboard widget.
+     *
+     * @param string|null $elementType Fully-qualified Element class
+     * @param int|null $sectionId Restrict to entries in this section (only meaningful when $elementType = Entry)
+     * @param 'count'|'average' $sort
+     * @return array<int, array{elementId:int, count:int, average:float}>
+     */
+    public function topReviewedElements(
+        ?string $elementType = null,
+        ?int $sectionId = null,
+        string $sort = 'count',
+        int $limit = 10,
+    ): array {
+        $query = (new Query())
+            ->from(['r' => '{{%vouch_reviews}}'])
+            ->innerJoin(['e' => '{{%elements}}'], '[[r.relatedElementId]] = [[e.id]]')
+            ->select([
+                'elementId' => 'r.relatedElementId',
+                'count' => 'COUNT(*)',
+                'average' => 'AVG([[r.rating]])',
+            ])
+            ->where(['r.approved' => true])
+            ->andWhere(['not', ['r.relatedElementId' => null]])
+            ->andWhere(['e.dateDeleted' => null])
+            ->groupBy(['r.relatedElementId'])
+            ->limit($limit);
+
+        if ($elementType !== null) {
+            $query->andWhere(['e.type' => $elementType]);
+        }
+
+        // Entries live in sections via the `{{%entries}}` table - join only
+        // when filtering by section so we don't pay for it otherwise.
+        if ($sectionId !== null) {
+            $query->innerJoin(['en' => '{{%entries}}'], '[[en.id]] = [[r.relatedElementId]]');
+            $query->andWhere(['en.sectionId' => $sectionId]);
+        }
+
+        $query->orderBy([
+            $sort === 'average' ? 'average' : 'count' => SORT_DESC,
+        ]);
+
+        return array_map(fn($row) => [
+            'elementId' => (int) $row['elementId'],
+            'count' => (int) $row['count'],
+            'average' => (float) $row['average'],
+        ], $query->all());
+    }
+
+    /**
      * Find an existing Review by `(sourceId, externalId)`. Returns null if
      * this is the first time we've seen the provider's review id.
      */
@@ -152,7 +204,7 @@ class Reviews extends Component
         $review->businessReply = $fetched->businessReply;
         $review->raw = $fetched->raw ? Json::encode($fetched->raw) : null;
 
-        // Target element relation — if the source is wired to a specific
+        // Target element relation - if the source is wired to a specific
         // entry/product, every review it brings in points at that element.
         // Later phases may resolve a more granular relation per-review (e.g.
         // Trustpilot product reviews carry their own product reference).
@@ -187,7 +239,7 @@ class Reviews extends Component
 
     /**
      * Build (don't save) a new manual review attached to the given source.
-     * Use this from controllers — it sets up the externalId, applies the
+     * Use this from controllers - it sets up the externalId, applies the
      * source's moderation defaults, and matches authors-to-users. Caller is
      * responsible for setting any other fields and then calling `save()`.
      */
@@ -204,7 +256,7 @@ class Reviews extends Component
 
     /**
      * Persist a manually-authored review. Triggers `EVENT_AFTER_SYNC_REVIEW`
-     * and (if newly approved) `EVENT_AFTER_APPROVE_REVIEW` — same contract
+     * and (if newly approved) `EVENT_AFTER_APPROVE_REVIEW` - same contract
      * downstream listeners see for synced reviews, so a single set of
      * subscribers handles both paths.
      */
@@ -220,6 +272,16 @@ class Reviews extends Component
             }
         } else {
             $review->reviewerEmailHash = null;
+        }
+
+        // Apply the source's moderation policy on new reviews so the
+        // auto-approve threshold is respected on every path - front-end
+        // submission, CP authoring, and API sync alike.
+        if ($isNew) {
+            $source = $review->getSource();
+            if ($source) {
+                $this->applyModeration($review, $source, true);
+            }
         }
 
         if (!Craft::$app->getElements()->saveElement($review)) {
@@ -282,7 +344,7 @@ class Reviews extends Component
     /**
      * Find an existing Craft user whose email matches the reviewer's,
      * if matching is enabled and the email is known. Never auto-creates
-     * users — that's a deliberate user-decision boundary.
+     * users - that's a deliberate user-decision boundary.
      */
     private function matchReviewerToUser(Review $review): void
     {
@@ -299,7 +361,7 @@ class Reviews extends Component
 
     /**
      * Decide whether the review should land approved or pending. Only applies
-     * on first ingest — re-syncing a review never silently flips an admin's
+     * on first ingest - re-syncing a review never silently flips an admin's
      * earlier approval decision.
      */
     private function applyModeration(Review $review, Source $source, bool $isNew): void

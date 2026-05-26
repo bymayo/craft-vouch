@@ -2,7 +2,7 @@
 
 Pull and manage reviews from Google, Trustpilot, Feefo and Reviews.io directly inside Craft. Also supports manually-authored reviews via the CP or front-end forms.
 
-> Status: pre-release. v5.0.0 ships the foundations — connectors, sync orchestration, manual reviews, element-index rating roll-up, Twig/GraphQL.
+> Status: pre-release. v5.0.0 ships the foundations - connectors, sync orchestration, manual reviews, element-index rating roll-up, Twig/GraphQL.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ Settings live in Project Config (so they sync via `project.yaml`) and can be ove
 
 ## Sync
 
-Sync is driven by cron — there's no per-source schedule setting. Common setups:
+Sync is driven by cron - there's no per-source schedule setting. Common setups:
 
 ```bash
 # Recommended: cron drives cadence, queue runner handles execution
@@ -45,7 +45,7 @@ Sync is driven by cron — there's no per-source schedule setting. Common setups
 # No queue worker, runs inline (slow sources block the cron):
 0 4 * * *  php craft vouch/sync/all --sync
 
-# Per-source cadence — multiple cron entries instead of in-app schedule:
+# Per-source cadence - multiple cron entries instead of in-app schedule:
 0 * * * *  php craft vouch/sync/source google-uk
 0 4 * * *  php craft vouch/sync/source trustpilot-main
 ```
@@ -54,12 +54,14 @@ The "Sync" button on each row of the Sources index runs synchronously for ad-hoc
 
 ## Twig
 
+`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only** - pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` to query pending instead, or `.approved(null)` to include both.
+
 ```twig
 {# Latest 5 approved reviews from any source #}
 {% for review in craft.vouch.reviews().limit(5).all() %}
   <article>
     <h3>{{ review.headline ?: review.reviewerName }}</h3>
-    <p>{{ review.rating }}★ — {{ review.reviewedAt|date('M j, Y') }}</p>
+    <p>{{ review.rating }} ★ - {{ review.reviewedAt|date('M j, Y') }}</p>
     <blockquote>{{ review.review }}</blockquote>
   </article>
 {% endfor %}
@@ -67,6 +69,9 @@ The "Sync" button on each row of the Sources index runs synchronously for ad-hoc
 {# Filter by source + rating threshold #}
 {% set google = craft.vouch.source('google-uk') %}
 {% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
+
+{# Include pending reviews too (e.g. an admin moderation dashboard) #}
+{% set everything = craft.vouch.reviews().approved(null).all() %}
 
 {# Site-wide average #}
 <p>Average rating: {{ craft.vouch.averageRating()|number_format(1) }}★</p>
@@ -142,7 +147,7 @@ Public GraphQL queries default to `approved: true` so pending-moderation reviews
 **Required:** `sourceHandle`, `rating`, `headline`, `review`, `reviewerName`, `reviewerEmail`.
 **Optional:** `relatedElementId` (ties the review to a specific entry / product).
 
-Submissions are only accepted against Manual sources — front-end forms can't write into API-backed sources (which would bypass the provider's own moderation).
+Submissions are only accepted against Manual sources - front-end forms can't write into API-backed sources (which would bypass the provider's own moderation).
 
 ## Element-index rating column
 
@@ -159,19 +164,19 @@ Event::on(
     Reviews::class,
     Reviews::EVENT_AFTER_APPROVE_REVIEW,
     function (ReviewApprovalEvent $event) {
-        // $event->review  — the Review element
-        // $event->source  — the Source the review came from
-        // $event->auto    — true if approved on sync, false if manually approved
+        // $event->review  - the Review element
+        // $event->source  - the Source the review came from
+        // $event->auto    - true if approved on sync, false if manually approved
     }
 );
 ```
 
 Available events:
 
-- `Reviews::EVENT_AFTER_SYNC_REVIEW` — every successful upsert (with `isNew` flag).
-- `Reviews::EVENT_AFTER_APPROVE_REVIEW` — exactly once per review when it becomes approved.
-- `Sync::EVENT_BEFORE_SOURCE_SYNC` — cancellable; `$event->cancelled = true` skips the run.
-- `Sync::EVENT_AFTER_SOURCE_SYNC` — carries the `SyncResult`.
+- `Reviews::EVENT_AFTER_SYNC_REVIEW` - every successful upsert (with `isNew` flag).
+- `Reviews::EVENT_AFTER_APPROVE_REVIEW` - exactly once per review when it becomes approved.
+- `Sync::EVENT_BEFORE_SOURCE_SYNC` - cancellable; `$event->cancelled = true` skips the run.
+- `Sync::EVENT_AFTER_SOURCE_SYNC` - carries the `SyncResult`.
 
 ## Adding your own provider
 

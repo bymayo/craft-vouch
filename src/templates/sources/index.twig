@@ -28,7 +28,7 @@
             <p>{{ 'No provider connectors are registered yet.'|t('vouch') }}</p>
         </div>
     {% else %}
-        {# Quick-add bar — one click straight to the new-source form for the
+        {# Quick-add bar - one click straight to the new-source form for the
            chosen provider. Sits above the table rather than as an action
            button so all five providers are visible at once. #}
         <div class="vouch-quickadd">
@@ -96,7 +96,7 @@
         .vouch-quickadd-name { font-weight: 500; }
         .vouch-existing-heading { margin: 0 0 .75em; }
         /* Tighten the gap between the row-status dot and the title link
-           in the sources table — Craft's default margin sits a bit far. */
+           in the sources table - Craft's default margin sits a bit far. */
         #sources-vue-admin-table .vuetable-component .status { margin-right: .35em; }
     </style>
 
@@ -114,7 +114,7 @@
                 { name: 'sync', title: '', callback: (v) => v },
             ],
             container: '#sources-vue-admin-table',
-            emptyMessage: Craft.t('vouch', 'No sources yet — pick a provider above to add one.'),
+            emptyMessage: Craft.t('vouch', 'No sources yet - pick a provider above to add one.'),
             tableDataEndpoint: 'vouch/sources/table-data',
             deleteAction: 'vouch/sources/delete',
             deleteConfirmationMessage: Craft.t('vouch', 'Are you sure you want to delete this source? Reviews already pulled in will remain.'),
@@ -148,7 +148,7 @@
                     text.textContent = label;
                 }
 
-                // Compact error label on the index — the full message is
+                // Compact error label on the index - the full message is
                 // shown on the source's edit page so users have somewhere
                 // to read the details without flooding the table cell.
                 var errLabel = '{{ 'Error'|t('vouch')|e('js') }}';

@@ -16,7 +16,7 @@ use craft\helpers\UrlHelper;
 /**
  * Filter reviews by the element they're related to (entry, product, etc.).
  * The element-type dropdown lets the user pick any element type Craft has
- * a relational field for — same UX as Craft's built-in "Related To" rule.
+ * a relational field for - same UX as Craft's built-in "Related To" rule.
  */
 class RelatedElementConditionRule extends BaseElementSelectConditionRule implements ElementConditionRuleInterface
 {
@@ -47,7 +47,7 @@ class RelatedElementConditionRule extends BaseElementSelectConditionRule impleme
     {
         $ids = $this->getElementIds();
         if (!empty($ids)) {
-            /** @phpstan-ignore-next-line — `relatedElementId()` is defined on ReviewQuery */
+            /** @phpstan-ignore-next-line - `relatedElementId()` is defined on ReviewQuery */
             $query->relatedElementId($ids[0]);
         }
     }
@@ -58,7 +58,7 @@ class RelatedElementConditionRule extends BaseElementSelectConditionRule impleme
         if (empty($ids)) {
             return true;
         }
-        /** @phpstan-ignore-next-line — `relatedElementId` is defined on Review */
+        /** @phpstan-ignore-next-line - `relatedElementId` is defined on Review */
         return (int) $element->relatedElementId === (int) $ids[0];
     }
 

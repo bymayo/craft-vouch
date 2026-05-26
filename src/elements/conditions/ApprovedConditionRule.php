@@ -22,13 +22,13 @@ class ApprovedConditionRule extends BaseLightswitchConditionRule implements Elem
 
     public function modifyQuery(ElementQueryInterface $query): void
     {
-        /** @phpstan-ignore-next-line — `approved()` is defined on ReviewQuery */
+        /** @phpstan-ignore-next-line - `approved()` is defined on ReviewQuery */
         $query->approved($this->value);
     }
 
     public function matchElement(ElementInterface $element): bool
     {
-        /** @phpstan-ignore-next-line — `approved` is defined on Review */
+        /** @phpstan-ignore-next-line - `approved` is defined on Review */
         return (bool) $element->approved === $this->value;
     }
 }

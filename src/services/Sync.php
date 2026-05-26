@@ -14,7 +14,7 @@ use yii\base\Component;
 /**
  * Drive a single sync run against one source.
  *
- * Phase 2 is intentionally synchronous — useful for "Sync now" buttons and
+ * Phase 2 is intentionally synchronous - useful for "Sync now" buttons and
  * for `vouch/sync/source` console runs against small Google data sets. Phase
  * 4 swaps this for a queue-backed `SyncSourceJob` that calls into the same
  * `run()` method, so all of the upsert/cursor/bookkeeping logic stays here.
@@ -47,7 +47,7 @@ class Sync extends Component
 
     /**
      * Queue jobs for every enabled source. Intended to be called from cron
-     * via `craft vouch/sync/all` — the cron's own cadence is the schedule;
+     * via `craft vouch/sync/all` - the cron's own cadence is the schedule;
      * there's no per-source schedule on top of it.
      *
      * @return int Number of jobs queued.

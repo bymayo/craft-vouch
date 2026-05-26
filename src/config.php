@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Vouch plugin — example config file.
+ * Vouch plugin - example config file.
  *
  * Copy this to `config/vouch.php` in your Craft project. Values here override
  * whatever is saved in the CP Settings page, so you can pin per-environment
  * behaviour (staging vs production) without depending on the DB row.
  *
- * Multi-environment config is supported via the standard Craft pattern — wrap
+ * Multi-environment config is supported via the standard Craft pattern - wrap
  * keys in `'*' => [...]`, `'dev' => [...]`, etc. See:
  * https://craftcms.com/docs/5.x/configure.html#multi-environment-configs
  */

@@ -33,6 +33,7 @@ use craft\events\RegisterUserPermissionsEvent;
 use craft\helpers\Html;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
+use craft\services\Dashboard;
 use craft\services\Elements;
 use craft\services\Gql;
 use craft\services\UserPermissions;
@@ -99,7 +100,7 @@ class Vouch extends Plugin
         if ($user->checkPermission('vouch-viewSources')) {
             $subnav['sources'] = ['label' => Craft::t('vouch', 'Sources'), 'url' => 'vouch/sources'];
         }
-        // Settings intentionally omitted from this subnav — managed via
+        // Settings intentionally omitted from this subnav - managed via
         // Settings → Plugins → Vouch (or project.yaml / config/vouch.php).
 
         if (empty($subnav)) {
@@ -192,7 +193,7 @@ class Vouch extends Plugin
                 }
                 $summary = self::getInstance()->reviews->ratingSummaryForElement($element->id);
                 if ($summary === null) {
-                    $event->html = '<span class="light">—</span>';
+                    $event->html = '<span class="light">-</span>';
                     return;
                 }
                 $event->html = sprintf(
@@ -225,8 +226,8 @@ class Vouch extends Plugin
     }
 
     /**
-     * Sidebar pane using `<fieldset><legend class="h6">…</legend><div class="meta">…</div></fieldset>` —
-     * Craft's own Status-pane structure — with `.field` rows so spacing is
+     * Sidebar pane using `<fieldset><legend class="h6">…</legend><div class="meta">…</div></fieldset>` -
+     * Craft's own Status-pane structure - with `.field` rows so spacing is
      * driven entirely by Craft's CSS.
      *
      * @param array<int, array<string, mixed>> $breakdown
@@ -235,7 +236,7 @@ class Vouch extends Plugin
     {
         $total = array_sum(array_map(fn($r) => (int) ($r['count'] ?? 0), $breakdown));
 
-        // Rating row — stars + numeric value.
+        // Rating row - stars + numeric value.
         $rows = sprintf(
             '<div class="field"><div class="heading"><label>%s</label></div>'
             . '<div class="input">%s</div></div>',
@@ -243,7 +244,7 @@ class Vouch extends Plugin
             self::renderStarRating($avg),
         );
 
-        // Reviews row — link to the reviews index with a pre-applied
+        // Reviews row - link to the reviews index with a pre-applied
         // "Related element" condition filter pointing at this element.
         $reviewsUrl = self::buildReviewsLinkForElement($elementId, $elementType);
         $rows .= sprintf(
@@ -456,6 +457,16 @@ class Vouch extends Plugin
             Elements::EVENT_REGISTER_ELEMENT_TYPES,
             function(RegisterComponentTypesEvent $event) {
                 $event->types[] = Review::class;
+            }
+        );
+
+        Event::on(
+            Dashboard::class,
+            Dashboard::EVENT_REGISTER_WIDGET_TYPES,
+            function(RegisterComponentTypesEvent $event) {
+                $event->types[] = \bymayo\vouch\widgets\PendingApprovalWidget::class;
+                $event->types[] = \bymayo\vouch\widgets\LatestReviewsWidget::class;
+                $event->types[] = \bymayo\vouch\widgets\TopReviewedElementsWidget::class;
             }
         );
 

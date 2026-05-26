@@ -9,7 +9,7 @@ use Craft;
 use craft\helpers\App;
 
 /**
- * Reviews.io connector — Merchant Reviews API.
+ * Reviews.io connector - Merchant Reviews API.
  *
  *  - Endpoint: `https://api.reviews.io/merchant/latest`
  *  - Auth: `store` (store id) + `apikey` (issued from Reviews.io dashboard
@@ -100,7 +100,7 @@ class ReviewsioConnector extends BaseConnector
 
             foreach ($reviews as $row) {
                 // Reviews.io uses `_id` on Mongo-style responses or `id` on
-                // newer endpoints — accept either.
+                // newer endpoints - accept either.
                 $externalId = (string) ($row['_id'] ?? $row['id'] ?? '');
                 if ($externalId === '') {
                     continue;

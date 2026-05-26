@@ -10,7 +10,7 @@ use craft\validators\UniqueValidator;
 
 /**
  * A configured connection to a third-party review provider. One row per
- * connection — a Craft install can have many sources, including multiple of
+ * connection - a Craft install can have many sources, including multiple of
  * the same provider (e.g. two Google locations).
  *
  * `settings` and `credentials` are free-form arrays whose shape is dictated by
@@ -40,7 +40,7 @@ class Source extends Model
     public ?int $maxRequestsPerSync = null;
 
     /**
-     * Sync cadence — `manual`, `hourly`, `daily`, or a cron expression.
+     * Sync cadence - `manual`, `hourly`, `daily`, or a cron expression.
      * Null means inherit the plugin default (manual until Phase 4).
      */
     public ?string $syncInterval = null;

@@ -11,7 +11,7 @@ use yii\helpers\Console;
 /**
  * `craft vouch/sync/*` console commands.
  *
- * Cadence is set by your cron entry, not by per-source config — there's no
+ * Cadence is set by your cron entry, not by per-source config - there's no
  * separate "schedule" on a Source. Examples:
  *
  *  - Hourly, queue-driven (recommended):

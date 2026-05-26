@@ -131,7 +131,7 @@
 
     {% if not source.id %}
         {% js %}
-            // Provider switcher — show/hide schema blocks and toggle their
+            // Provider switcher - show/hide schema blocks and toggle their
             // inputs' disabled state so only the active provider's fields
             // make it into the POST. The hidden providerHandle input
             // mirrors the selected value.
@@ -162,7 +162,7 @@
 
     {{ forms.lightswitchField({
         label: 'Require manual approval'|t('vouch'),
-        instructions: 'Hold reviews below {threshold}★ for admin approval.'|t('vouch', {
+        instructions: 'Hold reviews below {threshold} ★ for admin approval.'|t('vouch', {
             threshold: craft.app.plugins.getPlugin('vouch').getSettings().autoApproveThreshold,
         }),
         id: 'requiresApproval',
@@ -174,7 +174,7 @@
         {% js %}
             // Auto-check the connection on page load and render the result
             // as a status dot + label, matching the Akeneo settings page.
-            // No button, no panel — just a chip.
+            // No button, no panel - just a chip.
             (function() {
                 var container = document.querySelector('.vouch-connection-status[data-source-id]');
                 if (!container) return;

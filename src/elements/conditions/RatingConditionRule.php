@@ -22,13 +22,13 @@ class RatingConditionRule extends BaseNumberConditionRule implements ElementCond
 
     public function modifyQuery(ElementQueryInterface $query): void
     {
-        /** @phpstan-ignore-next-line — `rating()` is defined on ReviewQuery */
+        /** @phpstan-ignore-next-line - `rating()` is defined on ReviewQuery */
         $query->rating($this->paramValue());
     }
 
     public function matchElement(ElementInterface $element): bool
     {
-        /** @phpstan-ignore-next-line — `rating` is defined on Review */
+        /** @phpstan-ignore-next-line - `rating` is defined on Review */
         return $this->matchValue($element->rating);
     }
 }

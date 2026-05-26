@@ -1,0 +1,21 @@
+{# @var widget \bymayo\vouch\widgets\LatestReviewsWidget #}
+{# @var sourceOptions array #}
+{% import '_includes/forms' as forms %}
+
+{{ forms.selectField({
+    label: 'Source'|t('vouch'),
+    id: 'sourceId',
+    name: 'sourceId',
+    value: widget.sourceId,
+    options: sourceOptions,
+}) }}
+
+{{ forms.textField({
+    label: 'Limit'|t('vouch'),
+    id: 'limit',
+    name: 'limit',
+    value: widget.limit,
+    type: 'number',
+    min: 1,
+    max: 50,
+}) }}

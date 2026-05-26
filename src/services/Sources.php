@@ -11,7 +11,7 @@ use craft\helpers\StringHelper;
 use yii\base\Component;
 
 /**
- * CRUD for `Source` records — the configured connections to provider APIs.
+ * CRUD for `Source` records - the configured connections to provider APIs.
  *
  * Credentials are encrypted with Craft's security key on save and decrypted on
  * load, so the raw blob in the DB is never plaintext API keys. Settings stay
@@ -199,7 +199,7 @@ class Sources extends Component
             $value = Craft::$app->getSecurity()->decryptByKey($binary);
             return $value !== false ? $value : null;
         } catch (\Throwable) {
-            // App security key changed or value isn't actually encrypted —
+            // App security key changed or value isn't actually encrypted -
             // return null rather than corrupting the source UI with an error.
             return null;
         }

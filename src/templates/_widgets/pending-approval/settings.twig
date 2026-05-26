@@ -1,0 +1,12 @@
+{# @var widget \bymayo\vouch\widgets\PendingApprovalWidget #}
+{% import '_includes/forms' as forms %}
+
+{{ forms.textField({
+    label: 'Limit'|t('vouch'),
+    id: 'limit',
+    name: 'limit',
+    value: widget.limit,
+    type: 'number',
+    min: 1,
+    max: 50,
+}) }}

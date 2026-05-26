@@ -39,7 +39,7 @@ class Settings extends Model
      * When a source has `requiresApproval` on, reviews at or above this
      * rating skip the queue and land approved. Everything below holds for
      * an admin to look at. 5.0 means "only perfect-score reviews are
-     * auto-approved" — the strictest sensible default; turn `requiresApproval`
+     * auto-approved" - the strictest sensible default; turn `requiresApproval`
      * off entirely if you want everything to land approved.
      */
     public float $autoApproveThreshold = 5.0;

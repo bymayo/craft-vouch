@@ -9,7 +9,7 @@ use craft\queue\BaseJob;
 /**
  * Queue-backed wrapper around `Sync::run()`. Used by:
  *
- *  - Scheduled sync (cron → `vouch/sync/due`) — one job per due source so a
+ *  - Scheduled sync (cron → `vouch/sync/due`) - one job per due source so a
  *    slow Trustpilot account can't block a fast Google sync.
  *  - The CP "Sync now" button when the source is large enough that running
  *    it inline would tie up the request.
@@ -17,7 +17,7 @@ use craft\queue\BaseJob;
  * Failures throw, which lets Craft's queue retry policy take over (default
  * 3 attempts with exponential backoff). `Sync` itself still writes the error
  * onto `lastSyncError`, so a permanently-broken source surfaces in the CP
- * source list — not just in the queue manager.
+ * source list - not just in the queue manager.
  */
 class SyncSourceJob extends BaseJob
 {
@@ -29,7 +29,7 @@ class SyncSourceJob extends BaseJob
         $source = $vouch->sources->getSourceById($this->sourceId);
 
         if (!$source) {
-            // Source was deleted between queue and execution — drop quietly.
+            // Source was deleted between queue and execution - drop quietly.
             return;
         }
 

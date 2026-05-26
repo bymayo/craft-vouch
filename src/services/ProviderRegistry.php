@@ -68,7 +68,7 @@ class ProviderRegistry extends Component
     }
 
     /**
-     * Returns connector classes in registration order — useful for picker UIs
+     * Returns connector classes in registration order - useful for picker UIs
      * that want a stable list without instantiating every connector.
      *
      * @return class-string<ConnectorInterface>[]
