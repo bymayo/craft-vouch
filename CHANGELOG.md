@@ -34,9 +34,27 @@
 - Front-end submission via anonymous `vouch/reviews/submit` controller action - hard-rejects non-manual sources so customer submissions can't bypass Trustpilot/Feefo moderation.
 - API-sourced reviews show a "will be overwritten on next sync" warning when edited in the CP.
 - `Reviewer email` field is read-only for existing reviews (editable on create).
+- Front-end submit attaches per-field validation errors to the review model + sets a flash error + `requiresLogin` route param when applicable, so re-rendered forms can show inline errors and a "Log in" link.
+- Configurable `headlineMaxLength` (default 120) and `reviewMaxLength` (default 2000) length caps - applied as validation rules and surfaced as `maxlength` attributes in the documented Twig form example.
 
 #### Moderation
 - Per-source `Require manual approval` toggle on the source edit page. When on, reviews below the global `autoApproveThreshold` (default 5) land as Pending until approved by an admin.
+- `applyModeration()` now runs on **every** save path (front-end submit, CP author, API sync) - the threshold is consistent across all sources, not just provider syncs.
+- **Bulk Approve** element-index action on the reviews index. Skips already-approved rows, batches the work, fires `EVENT_AFTER_APPROVE_REVIEW` identically to single-row approvals. Visible to users with `vouch-editReviews`.
+
+#### Spam / attribution controls
+- Front-end submissions only link `reviewerUserId` when the submitter is authenticated AND their account email matches the submitted email - blocks the forge-by-email attribution attack.
+- `requireLoginForKnownEmails` setting (default `true`): rejects any submission whose email matches an existing Craft user when the submitter isn't logged in as them. Returns a 403 with `{ ok: false, requiresLogin: true, loginUrl, message, errors }` for JSON requests and attaches the rejection as a `reviewerEmail` validation error for HTML submits.
+
+#### Dashboard widgets
+- **Reviews Pending Approval** - lists pending reviews with title (truncated with ellipsis), rating, reviewer + relative date. Footer links to the pending source on the reviews index.
+- **Latest Reviews** - most recent approved reviews; optional per-source filter. Reviewer name links to the matched Craft user when known.
+- **Top Reviewed Elements** - ranks elements by review count or average rating. Configurable element type (Entries / Assets / Categories / Users / Commerce Products); when "Entries" is picked an additional section filter appears. Column header reflects the chosen element type's display name.
+- All three widgets' display names use the configured `pluginName` so a CP rename flows through.
+
+#### Users integration
+- Opt-in "Reviews" column on the Users element index showing how many approved reviews each user has authored (matched via `reviewerUserId`).
+- "Reviews" screen on the user edit page (and `/myaccount`) - mirrors the pattern Commerce uses for its "Commerce" tab. Embeds the reviews element index pre-filtered to that user. Sidebar label respects the configured `pluginName`.
 
 #### CP UX
 - Sources index uses Craft's `VueAdminTable` with built-in search, delete, and a per-row Sync button.
@@ -62,6 +80,8 @@
 
 #### Front-end surface
 - Twig `craft.vouch.*`: `reviews()` (chainable element query), `sources()`, `source(handle)`, `providers()`, `averageRating(sourceId?)`, `ratingForElement(elementId)`, `ratingBreakdownForElement(elementId)`, `pluginName()`.
+- `craft.vouch.reviews()` defaults to `approved(true)` so pending reviews never leak to the front-end. Pass `.approved(null)` to include both, `.approved(false)` for pending only.
+- Convenience getters on the `Review` element: `review.sourceName`, `review.sourceHandle`, `review.providerHandle`, `review.getReviewerUser()`.
 - GraphQL type `VouchReview` + two queries:
   - `vouchReviews` - filterable by `sourceId`, `rating`, `minRating`, `approved`, `reviewerUserId`, `relatedElementId`, `limit`, `offset`. Defaults to `approved: true` on the public surface.
   - `vouchReview(id)` - single review by id.
@@ -74,7 +94,10 @@
 - Plugin settings stored in Project Config (so they sync via `project.yaml`).
 - `config/vouch.php` overlays Project Config values for per-environment overrides.
 - Settings page accessible via Settings → Plugins → Vouch (not surfaced in Vouch's own sidebar).
-- Available settings: `pluginName`, `matchAuthorsToUsers`, `emailRetentionDays`, `backfillDays`, `autoApproveThreshold`.
+- Available settings: `pluginName`, `matchAuthorsToUsers`, `emailRetentionDays`, `backfillDays`, `autoApproveThreshold`, `requireLoginForKnownEmails`, `headlineMaxLength`, `reviewMaxLength`.
+
+### Changed
+- **Field rename + DB migration** (schema 1.0.1): `title→headline`, `body→review`, `authorName→reviewerName`, `authorEmail→reviewerEmail`, `authorEmailHash→reviewerEmailHash`, `authorUserId→reviewerUserId`, `response→businessReply`. Property, DB column, GraphQL type, Twig accessor, controller form-field, and condition rule names all updated. Migration `m260526_120000_rename_review_fields` renames the columns in place; FKs/indices are dropped and re-created against the new names. Anyone consuming the GraphQL surface, `craft.vouch.reviews()` filters, or the old property names will need to update their references.
 
 ### Fixed
 - Reviews index now extends `_layouts/elementindex` so the source-list sidebar renders to the left of the table.
@@ -82,3 +105,7 @@
 - Encrypted credentials are base64-encoded for UTF-8-safe storage in `TEXT` columns.
 - `HandleValidator` + unique-handle check on `Source` so duplicate handles surface as form validation rather than a SQL integrity exception.
 - Source dropdown on new-review form uses array-of-objects options to dodge Twig's integer-key reindexing in `merge`.
+- `reviewedAt` stored via `Db::prepareDateForDb()` so the timestamp survives PHP/DB timezone mismatches (previously a tz-less literal was written and re-interpreted as UTC, shifting dates across midnight boundaries).
+- `relatedElementId` no longer required on manual submissions (was rejecting otherwise-valid customer reviews).
+- Section field in the **Top Reviewed Elements** widget settings now toggles live on element-type change (was waiting until Save before appearing).
+- Element-index empty placeholders use em dashes (`—`) consistently.

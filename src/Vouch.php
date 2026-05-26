@@ -163,6 +163,44 @@ class Vouch extends Plugin
                 $this->wireRatingDisplay($productClass);
             }
         }
+
+        $this->wireUserReviewCount();
+    }
+
+    /**
+     * Opt-in "Reviews" column on the Users element index showing how many
+     * approved reviews the user has authored (matched via `reviewerUserId`).
+     * Links to the reviews index pre-filtered to that user.
+     */
+    private function wireUserReviewCount(): void
+    {
+        Event::on(
+            \craft\elements\User::class,
+            Element::EVENT_REGISTER_TABLE_ATTRIBUTES,
+            function(RegisterElementTableAttributesEvent $event) {
+                $event->tableAttributes['vouchReviewCount'] = [
+                    'label' => Craft::t('vouch', 'Reviews'),
+                ];
+            },
+        );
+
+        Event::on(
+            \craft\elements\User::class,
+            Element::EVENT_DEFINE_ATTRIBUTE_HTML,
+            function(DefineAttributeHtmlEvent $event) {
+                if ($event->attribute !== 'vouchReviewCount') return;
+                /** @var Element $element */
+                $element = $event->sender;
+                if (!$element->id) {
+                    $event->html = '';
+                    return;
+                }
+                $count = self::getInstance()->reviews->reviewCountForUser((int) $element->id);
+                $event->html = $count > 0
+                    ? (string) $count
+                    : '<span class="light">—</span>';
+            },
+        );
     }
 
     /**
@@ -193,7 +231,7 @@ class Vouch extends Plugin
                 }
                 $summary = self::getInstance()->reviews->ratingSummaryForElement($element->id);
                 if ($summary === null) {
-                    $event->html = '<span class="light">-</span>';
+                    $event->html = '<span class="light">—</span>';
                     return;
                 }
                 $event->html = sprintf(
@@ -495,7 +533,29 @@ class Vouch extends Plugin
 
                 $event->rules['vouch/settings'] = 'vouch/settings/edit';
                 $event->rules['POST vouch/settings'] = 'vouch/settings/save';
+
+                // Vouch screen on the user edit page (and the user's own
+                // /myaccount). The controller renders an embedded reviews
+                // index filtered to the chosen user.
+                $event->rules['users/<userId:\d+>/vouch-reviews'] = 'vouch/users/index';
+                $event->rules['myaccount/vouch-reviews'] = 'vouch/users/index';
             }
+        );
+
+        // Register the "Reviews" screen on the user edit page (Commerce-style).
+        // The label uses the configured plugin name so a rename in Settings
+        // flows through here too.
+        Event::on(
+            \craft\controllers\UsersController::class,
+            \craft\controllers\UsersController::EVENT_DEFINE_EDIT_SCREENS,
+            function(\craft\events\DefineEditUserScreensEvent $event) {
+                if (!Craft::$app->getUser()->checkPermission('vouch-viewReviews')) {
+                    return;
+                }
+                $event->screens[\bymayo\vouch\controllers\UsersController::SCREEN_REVIEWS] = [
+                    'label' => self::getInstance()->getSettings()->pluginName,
+                ];
+            },
         );
 
         Event::on(

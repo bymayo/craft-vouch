@@ -91,6 +91,13 @@ The "Sync" button on each row of the Sources index runs synchronously for ad-hoc
 {% endfor %}
 ```
 
+Each `Review` element exposes convenience getters so you don't need to chain through `review.source`:
+
+- `review.sourceName` - the source's display name (e.g. "Google UK")
+- `review.sourceHandle` - the source's machine handle
+- `review.providerHandle` - the connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`)
+- `review.getReviewerUser()` - the Craft `User` element when the reviewer's email matched an account, otherwise `null`
+
 ## GraphQL
 
 ```graphql
@@ -205,6 +212,27 @@ The sync path (Google / Trustpilot / Feefo / Reviews.io) does still auto-match e
 ## Element-index rating column
 
 Entries and Commerce Products both gain an opt-in "Rating" column showing the average across all approved reviews related to that element. Enable it via the column settings on the element index. The entry/product edit page also gains a sidebar summary with the overall average + per-source breakdown.
+
+## Users integration
+
+- **"Reviews" column** on the Users element index showing how many approved reviews each user has authored (matched via `reviewerUserId`).
+- **Reviews screen** on the user edit page (the same place Commerce adds its "Commerce" tab). Embeds the reviews element index pre-filtered to that user. The sidebar label uses the configured `pluginName`. Visible to users with `vouch-viewReviews`.
+
+## Reviews index actions
+
+The reviews element index ships with a built-in **Bulk Approve** action - select any number of pending reviews and approve them in one go. The action skips already-approved rows and fires `EVENT_AFTER_APPROVE_REVIEW` exactly the same way single-row approvals do, so downstream listeners (Points, notifications, etc.) work consistently across paths. Visible to users with the `vouch-editReviews` permission.
+
+## Dashboard widgets
+
+Three dashboard widgets ship with the plugin - add them from **Dashboard → "+ New widget"**. Widget display names use the configured `pluginName` so they show "{YourPluginName} - Reviews Pending Approval", etc.
+
+| Widget | What it shows | Settings |
+|---|---|---|
+| **Reviews Pending Approval** | Reviews awaiting moderation with title, rating, reviewer + date. Footer "View all pending reviews" links to the pending source on the reviews index. | `limit` |
+| **Latest Reviews** | The most recent approved reviews. Reviewer name links to the matched Craft user when available. | `limit`, `sourceId` (filter to one source, or "Any source") |
+| **Top Reviewed Elements** | Ranks elements by review count or average rating. First column header reads the element type's display name ("Entry", "Product", etc.). | `elementType` (Entries / Assets / Categories / Users / Commerce Products), `sectionId` (only shown when Entries selected), `sort` (Most reviews / Highest rating), `limit` |
+
+All three require the `vouch-viewReviews` permission.
 
 ## Events (for downstream integrations)
 

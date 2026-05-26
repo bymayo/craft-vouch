@@ -69,7 +69,7 @@ class SourcesController extends Controller
             // Em-dash for non-pullable / disabled sources so the column
             // stays readable.
             if (!$isPullable || !$source->enabled) {
-                $connectionHtml = '<span class="light">-</span>';
+                $connectionHtml = '<span class="light">—</span>';
             } else {
                 $connectionHtml = sprintf(
                     '<span class="vouch-connection-status" data-source-id="%d" data-pending="1">' .
@@ -90,7 +90,7 @@ class SourcesController extends Controller
             // and disabled sources show an em-dash placeholder so the
             // column width stays stable across rows.
             if (!$isPullable || !$source->enabled) {
-                $syncHtml = '<span class="light">-</span>';
+                $syncHtml = '<span class="light">—</span>';
             } else {
                 $syncHtml = sprintf(
                     '<form method="post" style="margin:0; display:inline-block;">' .

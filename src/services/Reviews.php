@@ -159,6 +159,19 @@ class Reviews extends Component
     }
 
     /**
+     * Count approved reviews authored by the given Craft user (via
+     * `reviewerUserId`). Used by the Users element-index column. A single
+     * COUNT keeps the column cheap even with many rows.
+     */
+    public function reviewCountForUser(int $userId): int
+    {
+        return (int) (new Query())
+            ->from('{{%vouch_reviews}}')
+            ->where(['reviewerUserId' => $userId, 'approved' => true])
+            ->count();
+    }
+
+    /**
      * Find an existing Review by `(sourceId, externalId)`. Returns null if
      * this is the first time we've seen the provider's review id.
      */
