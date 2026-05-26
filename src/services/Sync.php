@@ -104,6 +104,14 @@ class Sync extends Component
 
         try {
             foreach ($connector->fetchReviews($source, $since) as $fetched) {
+                // Per-source minRating filter: drop fetched reviews below the
+                // configured floor before any DB work. Lets admins suppress
+                // 1-2 star noise from a source without involving moderation.
+                if ($source->minRating !== null && $fetched->rating < $source->minRating) {
+                    $skipped++;
+                    continue;
+                }
+
                 $existing = $vouch->reviews->findBySourceAndExternalId($source->id, $fetched->externalId);
                 $review = $vouch->reviews->upsertFromFetched($source, $fetched);
 

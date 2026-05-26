@@ -115,7 +115,9 @@ class SourcesController extends Controller
                 // string) - truthy = green "enabled" dot, falsy = hollow.
                 // Same convention as Craft's own settings indexes.
                 'status' => $source->enabled,
-                'provider' => $connector ? $connector::displayName() : $source->providerHandle,
+                'provider' => $connector
+                    ? $connector::displayName() . $this->providerModeSuffix($source)
+                    : $source->providerHandle,
                 'connection' => $connectionHtml,
                 'lastSynced' => $lastSyncedHtml,
                 'sync' => $syncHtml,
@@ -208,6 +210,8 @@ class SourcesController extends Controller
         // value is intentional rather than a "leave it alone" signal.
         $source->credentials = (array) $request->getBodyParam('credentials', []);
         $source->requiresApproval = (bool) $request->getBodyParam('requiresApproval', false);
+        $minRating = $request->getBodyParam('minRating');
+        $source->minRating = ($minRating === null || $minRating === '') ? null : (float) $minRating;
 
         if (!$vouch->sources->saveSource($source)) {
             Craft::$app->getSession()->setError(Craft::t('vouch', 'Couldn’t save source.'));
@@ -237,6 +241,20 @@ class SourcesController extends Controller
 
         Craft::$app->getSession()->setNotice(Craft::t('vouch', 'Source deleted.'));
         return $this->redirect('vouch/sources');
+    }
+
+    /**
+     * Returns " (Places)" / " (Business Profile)" etc. when a provider has a
+     * mode setting worth surfacing in the Sources index. Empty string when
+     * there's nothing to distinguish.
+     */
+    private function providerModeSuffix(Source $source): string
+    {
+        if ($source->providerHandle === 'google') {
+            $mode = (string) ($source->settings['mode'] ?? 'places');
+            return $mode === 'businessProfile' ? ' (Business Profile)' : ' (Places)';
+        }
+        return '';
     }
 
     /**
