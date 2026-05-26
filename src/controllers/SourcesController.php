@@ -236,6 +236,31 @@ class SourcesController extends Controller
         return $this->redirect('vouch/sources');
     }
 
+    /**
+     * Proxy for Google Places Text Search - lets admins find a Place ID
+     * by name from the source edit page rather than hand-pasting one. The
+     * API key is read from the request body (not the saved source) so it
+     * works during source creation too.
+     */
+    public function actionFindGooglePlace(): Response
+    {
+        $this->requirePostRequest();
+        $this->requireAcceptsJson();
+        $this->requirePermission('vouch-manageSources');
+
+        $request = Craft::$app->getRequest();
+        $apiKey = \craft\helpers\App::parseEnv((string) $request->getRequiredBodyParam('apiKey'));
+        $query = (string) $request->getRequiredBodyParam('query');
+
+        try {
+            $places = \bymayo\vouch\connectors\google\GoogleConnector::searchPlaces($apiKey, $query);
+        } catch (\Throwable $e) {
+            return $this->asJson(['ok' => false, 'message' => $e->getMessage()]);
+        }
+
+        return $this->asJson(['ok' => true, 'places' => $places]);
+    }
+
     public function actionTest(): Response
     {
         $this->requirePostRequest();

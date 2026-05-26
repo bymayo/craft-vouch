@@ -125,6 +125,29 @@
                         placeholder: field.placeholder ?? null,
                     }) }}
                 {% endfor %}
+
+                {% if handle == 'google' %}
+                    {# Search helper - calls Places Text Search via the
+                       vouch/sources/find-google-place controller action so the
+                       API key never round-trips through the browser. Picking
+                       a result populates the Place ID input above. #}
+                    <div class="vouch-google-finder" style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
+                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Find a Place ID'|t('vouch') }}</h3>
+                        <p class="light" style="margin:0 0 10px 0;">
+                            {{ 'Search Google Places by name or address. Requires the API key above to be filled in.'|t('vouch') }}
+                        </p>
+                        <div style="display:flex;gap:8px;align-items:flex-start;">
+                            <input type="text" class="text fullwidth vouch-google-finder-query"
+                                   placeholder="{{ 'e.g. Spicy Vegetarian Food in Sydney, Australia'|t('vouch') }}"
+                                   style="flex:1;">
+                            <button type="button" class="btn submit vouch-google-finder-button">
+                                {{ 'Search'|t('vouch') }}
+                            </button>
+                        </div>
+                        <div class="vouch-google-finder-status light smalltext" style="margin-top:8px;"></div>
+                        <ul class="vouch-google-finder-results" style="margin:10px 0 0 0;padding:0;list-style:none;"></ul>
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
     {% endfor %}
@@ -156,6 +179,97 @@
             })();
         {% endjs %}
     {% endif %}
+
+    {% js %}
+        // Google Place ID finder - POSTs to the controller proxy with the
+        // user-entered API key + query, then renders the matching places as
+        // clickable rows that auto-fill the Place ID input.
+        (function() {
+            var block = document.querySelector('.vouch-schema-block[data-provider="google"]');
+            if (!block) return;
+
+            var btn = block.querySelector('.vouch-google-finder-button');
+            var queryInput = block.querySelector('.vouch-google-finder-query');
+            var statusEl = block.querySelector('.vouch-google-finder-status');
+            var resultsEl = block.querySelector('.vouch-google-finder-results');
+            var apiKeyInput = block.querySelector('input[name="credentials[apiKey]"]');
+            var placeIdInput = block.querySelector('input[name="settings[placeId]"]');
+            if (!btn || !queryInput || !apiKeyInput || !placeIdInput) return;
+
+            function setStatus(msg, isError) {
+                statusEl.textContent = msg || '';
+                statusEl.style.color = isError ? 'var(--error-color, #c33)' : '';
+            }
+
+            function renderResults(places) {
+                resultsEl.innerHTML = '';
+                if (!places.length) {
+                    setStatus({{ 'No matches found.'|t('vouch')|json_encode|raw }}, false);
+                    return;
+                }
+                setStatus('', false);
+                places.forEach(function(p) {
+                    var li = document.createElement('li');
+                    li.style.cssText = 'padding:8px;border:1px solid var(--hairline-color);border-radius:4px;margin-top:6px;cursor:pointer;';
+                    li.innerHTML = '<strong></strong><div class="light smalltext"></div><code class="smalltext"></code>';
+                    li.querySelector('strong').textContent = p.displayName || '(unnamed)';
+                    li.querySelector('.light').textContent = p.address || '';
+                    li.querySelector('code').textContent = p.id;
+                    li.addEventListener('click', function() {
+                        placeIdInput.value = p.id;
+                        placeIdInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        setStatus({{ 'Place ID applied.'|t('vouch')|json_encode|raw }}, false);
+                    });
+                    resultsEl.appendChild(li);
+                });
+            }
+
+            btn.addEventListener('click', function() {
+                var apiKey = apiKeyInput.value.trim();
+                var query = queryInput.value.trim();
+                if (!apiKey) {
+                    setStatus({{ 'Enter an API key above first.'|t('vouch')|json_encode|raw }}, true);
+                    return;
+                }
+                if (!query) {
+                    setStatus({{ 'Enter a search query.'|t('vouch')|json_encode|raw }}, true);
+                    return;
+                }
+
+                btn.disabled = true;
+                setStatus({{ 'Searching…'|t('vouch')|json_encode|raw }}, false);
+                resultsEl.innerHTML = '';
+
+                var data = new FormData();
+                data.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                data.append('action', 'vouch/sources/find-google-place');
+                data.append('apiKey', apiKey);
+                data.append('query', query);
+
+                fetch(Craft.getActionUrl('vouch/sources/find-google-place'), {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: data,
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(json) {
+                    if (!json.ok) {
+                        setStatus(json.message || 'Search failed.', true);
+                        return;
+                    }
+                    renderResults(json.places || []);
+                })
+                .catch(function(err) {
+                    setStatus(err.message || 'Search failed.', true);
+                })
+                .finally(function() { btn.disabled = false; });
+            });
+
+            queryInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+            });
+        })();
+    {% endjs %}
 
     <hr>
     <h2>{{ 'Moderation'|t('vouch') }}</h2>

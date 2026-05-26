@@ -19,7 +19,73 @@ Pull and manage reviews from Google, Trustpilot, Feefo and Reviews.io directly i
 | Reviews.io | Yes (Merchant Reviews API) | No | Store ID + API key |
 | Manual | Authored in the CP or via front-end form submission | n/a | n/a |
 
-All credential fields support `$ENV_VAR` references and are resolved at use-time via `App::parseEnv()`.
+All credential fields support `$ENV_VAR` references and are resolved at use-time via `App::parseEnv()`. Recommended: keep secrets in `.env` and reference them like `$GOOGLE_PLACES_API_KEY`, so production credentials never end up in `project.yaml`.
+
+## Source setup
+
+Each source in Vouch maps to one credential set against a specific provider. Source records live in the `{{%vouch_sources}}` table, **not** in Project Config - this is deliberate, so an admin can rotate API keys on production without a deploy clobbering them.
+
+Add a source via **Vouch → Sources → New source**, pick the provider tile, fill in the credentials, and hit Save. A "Test connection" check runs automatically on the source edit page so you'll know straight away if the credentials are wrong.
+
+### Google Reviews
+
+Backed by the [Places API (New)](https://developers.google.com/maps/documentation/places/web-service/overview).
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com) and create (or select) a project.
+2. Enable the **Places API (New)** under **APIs & Services → Library**.
+3. Create an API key: **APIs & Services → Credentials → Create credentials → API key**.
+4. **Strongly recommended:** restrict the key. Under the key's settings, set "Application restrictions" to your server IP(s) and "API restrictions" to Places API (New) only - that way a leaked key can't be re-used for billed Maps calls.
+5. In Vouch, on the new-source page paste the API key into the "API key" field.
+6. Use the built-in **"Find a Place ID"** search box on the same page - type the business name (e.g. *"Spicy Vegetarian Food in Sydney"*) and click **Search**. Vouch proxies the [Places Text Search](https://developers.google.com/maps/documentation/places/web-service/text-search) endpoint server-side and lists matching candidates with their name, address, and Place ID. Clicking a result auto-fills the Place ID field above. The API key never round-trips to Google directly from the browser - the request is signed by Vouch's controller.
+
+   You can also paste a Place ID manually if you already have one from Google's [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id).
+
+> Google's Places API caps every request at **the 5 most recent reviews**. There's no way to page past that - it's an upstream constraint, not a Vouch limitation. Sync still runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. The global `backfillDays` setting still applies on first sync: if a place's most recent reviews are all older than the backfill window, you'll see "0 new, 0 updated". **Set `backfillDays` to `0` for Google sources** (unlimited history) since the upstream 5-review cap already keeps the cost bounded.
+
+### Trustpilot
+
+Backed by the public [Business Units API](https://developers.trustpilot.com/business-units-api).
+
+1. Sign in to [Trustpilot Business](https://business.trustpilot.com).
+2. Generate an API key under your account's API / Integrations settings. The public tier is sufficient for pulling reviews of your own business unit.
+3. Find your **Business Unit ID**. Easiest is a one-off curl using your new key:
+   ```bash
+   curl "https://api.trustpilot.com/v1/business-units/find?name=yourdomain.com" \
+     -H "apikey: YOUR_API_KEY"
+   ```
+   The `id` field in the response is the Business Unit ID.
+4. In Vouch, paste both into the Trustpilot source edit page.
+
+Trustpilot returns reviews in newest-first order; Vouch paginates with cursor early-exit, so on subsequent syncs only the new pages are walked.
+
+### Feefo
+
+Backed by the [Reviews API v20](https://api.feefo.com/api/docs).
+
+1. Your **Merchant identifier** is the slug you log into Feefo with (visible in your merchant dashboard URL).
+2. An **API key** is optional. Public review data flows without one; private/PII fields (e.g. customer email) require a paid plan and a bearer key. Request the key from your Feefo account manager if you need it.
+3. In Vouch, paste the merchant identifier and (optionally) the API key into the Feefo source edit page.
+
+If the API key is omitted, Vouch falls back to the unauthenticated endpoint, so reviewer emails come through as `null` and user-matching won't fire.
+
+### Reviews.io
+
+Backed by the [Merchant Reviews API](https://developer.reviews.co.uk/).
+
+1. Sign in to [your Reviews.io merchant dashboard](https://dash.reviews.io).
+2. Go to **Integrations → API**. Copy your **Store ID** (your merchant code) and your **API key**.
+3. In Vouch, paste both into the Reviews.io source edit page.
+
+Reviews.io passes the reviewer email through when present, so user-matching works out of the box (subject to the `matchAuthorsToUsers` setting).
+
+### Manual
+
+No external credentials. Add a Manual source if you want to:
+
+- Author reviews directly in the CP (the **+ New review** button on the reviews index).
+- Collect reviews via a front-end form (see [Front-end review submissions](#front-end-review-submissions-manual-sources-only) below).
+
+Manual sources can have `Require manual approval` toggled on, just like API-backed sources - moderation still respects the global `autoApproveThreshold`.
 
 ## Settings
 

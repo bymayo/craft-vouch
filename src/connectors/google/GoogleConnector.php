@@ -31,6 +31,7 @@ use GuzzleHttp\Exception\GuzzleException;
 class GoogleConnector extends BaseConnector
 {
     public const ENDPOINT_PLACE = 'https://places.googleapis.com/v1/places/';
+    public const ENDPOINT_SEARCH = 'https://places.googleapis.com/v1/places:searchText';
 
     public static function handle(): string
     {
@@ -114,6 +115,9 @@ class GoogleConnector extends BaseConnector
             // The cursor-style `since` filter Places-New doesn't support: we
             // honour it client-side so callers get a consistent semantics
             // across providers, even though we always fetch the full 5.
+            // Set `backfillDays` to 0 to disable this and import every review
+            // the Places API returns (recommended for Google sources since
+            // Places-New caps at 5 anyway).
             if ($since && $publishTime && $publishTime < $since) {
                 continue;
             }
@@ -185,5 +189,54 @@ class GoogleConnector extends BaseConnector
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Search Google Places by free-text query, returning the candidate
+     * matches with their Place IDs. Used by the "Find Place ID" helper on
+     * the source edit page so admins can avoid hand-pasting a Place ID.
+     *
+     * @return array<int, array{id: string, displayName: string, address: string}>
+     * @throws \RuntimeException when the API key is rejected or returns an error
+     */
+    public static function searchPlaces(string $apiKey, string $query): array
+    {
+        $apiKey = trim($apiKey);
+        $query = trim($query);
+        if ($apiKey === '' || $query === '') {
+            throw new \RuntimeException('Both an API key and a search query are required.');
+        }
+
+        $client = Craft::createGuzzleClient(['timeout' => 15]);
+
+        $response = $client->request('POST', self::ENDPOINT_SEARCH, [
+            'headers' => [
+                'X-Goog-Api-Key' => $apiKey,
+                'X-Goog-FieldMask' => 'places.id,places.displayName,places.formattedAddress',
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+            'json' => ['textQuery' => $query],
+            'http_errors' => false,
+        ]);
+
+        $status = $response->getStatusCode();
+        $decoded = json_decode((string) $response->getBody(), true);
+
+        if ($status >= 400) {
+            $message = $decoded['error']['message']
+                ?? sprintf('Google Places API returned HTTP %d.', $status);
+            throw new \RuntimeException($message);
+        }
+
+        if (!is_array($decoded)) {
+            throw new \RuntimeException('Google Places API returned an unparseable response.');
+        }
+
+        return array_map(fn(array $row) => [
+            'id' => (string) ($row['id'] ?? ''),
+            'displayName' => (string) ($row['displayName']['text'] ?? ''),
+            'address' => (string) ($row['formattedAddress'] ?? ''),
+        ], $decoded['places'] ?? []);
     }
 }

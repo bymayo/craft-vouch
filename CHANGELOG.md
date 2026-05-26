@@ -9,6 +9,9 @@
 - Install migration for `{{%vouch_sources}}` and `{{%vouch_reviews}}` tables.
 - `Review` element type with element index, status filtering (Live / Pending approval), per-source sub-sources, and standard `craft.vouch.reviews()` queries.
 
+#### Source UX
+- **"Find a Place ID" search** on the Google Reviews source edit page. Proxies the Places Text Search endpoint via `SourcesController::actionFindGooglePlace` using the API key from the form (works on new, unsaved sources too) and lists matching places with click-to-fill behaviour. Saves admins from hand-pasting opaque `ChIJ…` IDs.
+
 #### Provider connectors
 - `ConnectorInterface` + `BaseConnector` + `FetchedReview` DTO + event-driven `ProviderRegistry` - third-party plugins can add their own connectors via `EVENT_REGISTER_PROVIDERS`.
 - **Google Reviews** connector (Places API New): `apiKey` + `placeId`, documents the 5-review cap upstream.
@@ -109,3 +112,4 @@
 - `relatedElementId` no longer required on manual submissions (was rejecting otherwise-valid customer reviews).
 - Section field in the **Top Reviewed Elements** widget settings now toggles live on element-type change (was waiting until Save before appearing).
 - Element-index empty placeholders use em dashes (`—`) consistently.
+- Google source setup: README now recommends `backfillDays=0` for Google sources (Places-New caps at 5 reviews per call anyway, so the upstream cost is already bounded). With the default 90-day filter, places whose most recent reviews were all older than 90 days returned "0 new, 0 updated" on first sync, which read like a credentials failure.

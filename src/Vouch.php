@@ -530,6 +530,7 @@ class Vouch extends Plugin
                 $event->rules['POST vouch/sources/delete'] = 'vouch/sources/delete';
                 $event->rules['POST vouch/sources/test'] = 'vouch/sources/test';
                 $event->rules['POST vouch/sources/sync'] = 'vouch/sources/sync';
+                $event->rules['POST vouch/sources/find-google-place'] = 'vouch/sources/find-google-place';
 
                 $event->rules['vouch/settings'] = 'vouch/settings/edit';
                 $event->rules['POST vouch/settings'] = 'vouch/settings/save';
