@@ -127,7 +127,7 @@ class Review extends Element
         // looking at a source that's likely to contain pending rows. The action
         // itself is a no-op for already-approved reviews, but offering it on the
         // "All reviews" / per-source views keeps the UI usable in moderation.
-        if (Craft::$app->getUser()->checkPermission('vouch-editReviews')) {
+        if (Craft::$app->getUser()->checkPermission('vouch-approveReviews')) {
             $actions[] = \bymayo\vouch\elements\actions\ApproveReviews::class;
         }
 

@@ -181,11 +181,14 @@ class SourcesController extends Controller
     public function actionSave(): ?Response
     {
         $this->requirePostRequest();
-        $this->requirePermission('vouch-manageSources');
 
         $vouch = Vouch::getInstance();
         $request = Craft::$app->getRequest();
         $sourceId = $request->getBodyParam('sourceId');
+
+        // Split permission: editing an existing source vs creating a new
+        // one are distinct concerns now. Existing source → edit; no id → create.
+        $this->requirePermission($sourceId ? 'vouch-editSources' : 'vouch-createSources');
 
         $source = $sourceId
             ? $vouch->sources->getSourceById((int) $sourceId)
@@ -219,7 +222,7 @@ class SourcesController extends Controller
     public function actionDelete(): Response
     {
         $this->requirePostRequest();
-        $this->requirePermission('vouch-manageSources');
+        $this->requirePermission('vouch-deleteSources');
 
         $request = Craft::$app->getRequest();
         // VueAdminTable posts `id`; legacy form HTML posts `sourceId`.
@@ -246,7 +249,13 @@ class SourcesController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
-        $this->requirePermission('vouch-manageSources');
+
+        // Available to anyone allowed to author a source - whether they're
+        // creating a new Google source or editing an existing one.
+        $user = Craft::$app->getUser();
+        if (!$user->checkPermission('vouch-createSources') && !$user->checkPermission('vouch-editSources')) {
+            throw new \yii\web\ForbiddenHttpException();
+        }
 
         $request = Craft::$app->getRequest();
         $apiKey = \craft\helpers\App::parseEnv((string) $request->getRequiredBodyParam('apiKey'));

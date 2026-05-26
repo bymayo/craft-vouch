@@ -136,7 +136,7 @@ class ReviewsController extends Controller
     public function actionApprove(): Response
     {
         $this->requirePostRequest();
-        $this->requirePermission('vouch-editReviews');
+        $this->requirePermission('vouch-approveReviews');
 
         $reviewId = (int) Craft::$app->getRequest()->getRequiredBodyParam('reviewId');
         $review = Review::find()->id($reviewId)->status(null)->one();

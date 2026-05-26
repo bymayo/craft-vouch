@@ -576,8 +576,9 @@ class Vouch extends Plugin
             UserPermissions::class,
             UserPermissions::EVENT_REGISTER_PERMISSIONS,
             function(RegisterUserPermissionsEvent $event) {
+                $pluginName = self::getInstance()->getSettings()->pluginName;
                 $event->permissions[] = [
-                    'heading' => Craft::t('vouch', 'Vouch'),
+                    'heading' => $pluginName,
                     'permissions' => [
                         'vouch-viewReviews' => [
                             'label' => Craft::t('vouch', 'View reviews'),
@@ -587,12 +588,20 @@ class Vouch extends Plugin
                                 'vouch-deleteReviews' => ['label' => Craft::t('vouch', 'Delete reviews')],
                             ],
                         ],
+                        'vouch-approveReviews' => [
+                            'label' => Craft::t('vouch', 'Approve pending reviews'),
+                        ],
                         'vouch-viewSources' => [
                             'label' => Craft::t('vouch', 'View sources'),
                             'nested' => [
-                                'vouch-manageSources' => ['label' => Craft::t('vouch', 'Create, edit and delete sources')],
+                                'vouch-createSources' => ['label' => Craft::t('vouch', 'Create sources')],
+                                'vouch-editSources' => ['label' => Craft::t('vouch', 'Edit sources')],
+                                'vouch-deleteSources' => ['label' => Craft::t('vouch', 'Delete sources')],
                                 'vouch-syncSources' => ['label' => Craft::t('vouch', 'Trigger sync')],
                             ],
+                        ],
+                        'vouch-viewWidgets' => [
+                            'label' => Craft::t('vouch', 'Use dashboard widgets'),
                         ],
                         'vouch-manageSettings' => [
                             'label' => Craft::t('vouch', 'Manage settings'),

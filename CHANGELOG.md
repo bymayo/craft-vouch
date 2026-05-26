@@ -55,6 +55,12 @@
 - **Top Reviewed Elements** - ranks elements by review count or average rating. Configurable element type (Entries / Assets / Categories / Users / Commerce Products); when "Entries" is picked an additional section filter appears. Column header reflects the chosen element type's display name.
 - All three widgets' display names use the configured `pluginName` so a CP rename flows through.
 
+#### Permissions
+- `vouch-approveReviews` - top-level permission (sibling of "View reviews") that gates both the single-row Approve button and the bulk Approve element-index action. Lets a moderator-only role approve without granting full edit/delete.
+- `vouch-manageSources` split into three: `vouch-createSources`, `vouch-editSources`, `vouch-deleteSources`. `actionSave` distinguishes new vs edit by `sourceId` and gates accordingly; `actionDelete` requires `vouch-deleteSources`; the "+ New source" tiles on the sources index now check `vouch-createSources`; the "Find a Place ID" helper accepts either `vouch-createSources` or `vouch-editSources`.
+- `vouch-viewWidgets` - new top-level permission. All three dashboard widgets' `isSelectable()` now checks this instead of `vouch-viewReviews`, so admins can hide widgets independently of review access.
+- Permissions heading uses the configured `pluginName` so a CP rename flows through to the user-group settings UI.
+
 #### Users integration
 - Opt-in "Reviews" column on the Users element index showing how many approved reviews each user has authored (matched via `reviewerUserId`).
 - "Reviews" screen on the user edit page (and `/myaccount`) - mirrors the pattern Commerce uses for its "Commerce" tab. Embeds the reviews element index pre-filtered to that user. Sidebar label respects the configured `pluginName`.

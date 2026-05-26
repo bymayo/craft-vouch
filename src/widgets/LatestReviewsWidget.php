@@ -34,7 +34,7 @@ class LatestReviewsWidget extends Widget
 
     public static function isSelectable(): bool
     {
-        return Craft::$app->getUser()->checkPermission('vouch-viewReviews');
+        return Craft::$app->getUser()->checkPermission('vouch-viewWidgets');
     }
 
     public function getTitle(): ?string

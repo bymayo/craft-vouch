@@ -102,6 +102,32 @@ Settings live in Project Config (so they sync via `project.yaml`) and can be ove
 | `headlineMaxLength` | `120` | Max characters allowed in a manual review's headline. `0` disables. Synced provider data is exempt. |
 | `reviewMaxLength` | `2000` | Max characters allowed in a manual review body. `0` disables. Synced provider data is exempt. |
 
+## Permissions
+
+Vouch registers a permission set per user group (Settings → Users → Groups, then edit a group). The Vouch heading respects the configured `pluginName` so a CP rename flows through.
+
+| Permission | What it grants |
+|---|---|
+| **View reviews** | Read-only access to the reviews element index, edit page, and the "Reviews" tab on user edit pages. Required for everything nested under it. |
+| ↳ Create reviews | The "+ New review" button + the `vouch/reviews/save` action on new reviews. |
+| ↳ Edit reviews | Editing existing reviews (the Approved lightswitch and any other writable fields). Does **not** allow approving via the dedicated action. |
+| ↳ Delete reviews | The Delete element-action and the `vouch/reviews/delete` controller action. |
+| **Approve pending reviews** | Top-level on purpose so you can grant it to a moderator role without giving them edit/delete on review content. Gates the single-row Approve button **and** the bulk Approve element-index action. |
+| **View sources** | Read-only access to the Sources index + edit page. Required for everything nested under it. |
+| ↳ Create sources | The "+ New source" tiles on the sources index and saving a new source via `vouch/sources/save`. Also gates the "Find a Place ID" helper. |
+| ↳ Edit sources | Saving changes to an existing source. Also gates the "Find a Place ID" helper. |
+| ↳ Delete sources | Deleting a source from the Sources index. |
+| ↳ Trigger sync | The per-row "Sync" button on the sources index, the "Test connection" check on the source edit page, and the `vouch/sync/source` / `vouch/sync/all` console commands. |
+| **Use dashboard widgets** | Whether Vouch's dashboard widgets (Pending Approval, Latest Reviews, Top Reviewed Elements) appear in the widget picker. Independent of view-reviews so you can hide widgets from a role that still has full review access (or vice versa). |
+| **Manage settings** | Access to Settings → Plugins → Vouch. |
+
+Each is independent. Common combinations:
+
+- **Pure moderator** - `View reviews` + `Approve pending reviews`. Can see everything and approve, can't edit content or delete.
+- **Content author** - `View reviews` + `Create reviews` + `Edit reviews`. Can author and edit, can't approve their own work.
+- **Sync operator** - `View sources` + `Trigger sync`. Can re-run failed pulls without being able to rotate API keys or delete sources.
+- **Source manager** - `View sources` + `Create sources` + `Edit sources` (no delete). Sets up new providers + rotates credentials, but can't accidentally remove a source.
+
 ## Sync
 
 Sync is driven by cron - there's no per-source schedule setting. Common setups:

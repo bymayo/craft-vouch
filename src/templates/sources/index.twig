@@ -14,7 +14,7 @@
 {% do view.registerAssetBundle('craft\\web\\assets\\admintable\\AdminTableAsset') %}
 
 {% block actionButton %}
-    {% if providers|length and currentUser.can('vouch-manageSources') %}
+    {% if providers|length and currentUser.can('vouch-createSources') %}
         <a href="{{ url('vouch/sources/new') }}" class="btn submit add icon">
             {{ 'Add source'|t('vouch') }}
         </a>
