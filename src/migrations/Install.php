@@ -4,6 +4,12 @@ namespace bymayo\vouch\migrations;
 
 use craft\db\Migration;
 
+/**
+ * Fresh-install migration. Reflects the post-rename schema as of v1.0.1 so
+ * new installs land on the current column names directly and skip the
+ * `m260526_120000_rename_review_fields` migration (which only fires for
+ * upgrades from v1.0.0 where the original column names were still in place).
+ */
 class Install extends Migration
 {
     public function safeUp(): bool

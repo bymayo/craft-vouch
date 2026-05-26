@@ -1,6 +1,6 @@
 # Vouch Changelog
 
-## 5.0.0 - Unreleased
+## 5.0.0 - 2026-05-26
 
 ### Added
 
