@@ -303,10 +303,16 @@ Grab the high-rated reviews from one source.
 
 ### Review properties
 
-When you loop over results from `craft.vouch.reviews()`, each review element exposes the usual fields (`headline`, `review`, `rating`, `reviewerName`, `reviewerEmail`, `reviewedAt`, etc.) plus these extras:
+Each review element returned by `craft.vouch.reviews()` exposes:
 
 | Call | Returns |
 |---|---|
+| `review.headline` | The review's short title |
+| `review.review` | The review body text |
+| `review.rating` | Numeric rating from 1-5 |
+| `review.reviewerName` | Display name of the reviewer |
+| `review.reviewerEmail` | Reviewer's email (when available) |
+| `review.reviewedAt` | Date the review was left |
 | `review.sourceName` | The source's display name (e.g. "Google UK") |
 | `review.sourceHandle` | The source's machine handle |
 | `review.providerHandle` | The connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`) |
