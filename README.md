@@ -224,8 +224,35 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
 
 `craft.vouch.reviews()` returns a chainable query that **defaults to approved-only**, so pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
 
+### Overall rating across all sources
+
+Drop this in a footer, homepage hero, or trust banner.
+
 ```twig
-{# Latest 5 approved reviews from any source #}
+{% set average = craft.vouch.averageRating() %}
+{% set count = craft.vouch.reviews().count() %}
+
+{% if count %}
+  <p>Rating: {{ average|number_format(1) }} ★ ({{ count }} {{ count == 1 ? 'review' : 'reviews' }})</p>
+{% endif %}
+```
+
+### Rating for a single entry or product
+
+Use on a product or entry detail page to show that element's own rating.
+
+```twig
+{% set rating = craft.vouch.ratingForElement(entry.id) %}
+{% set count = craft.vouch.reviews().relatedElementId(entry.id).count() %}
+
+{% if rating %}
+  <p>{{ rating|number_format(1) }} ★ ({{ count }} {{ count == 1 ? 'review' : 'reviews' }})</p>
+{% endif %}
+```
+
+### Listing the latest reviews
+
+```twig
 {% for review in craft.vouch.reviews().limit(5).all() %}
   <article>
     <h3>{{ review.headline ?: review.reviewerName }}</h3>
@@ -233,27 +260,50 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
     <blockquote>{{ review.review }}</blockquote>
   </article>
 {% endfor %}
+```
 
-{# Filter by source + rating threshold #}
-{% set google = craft.vouch.source('google-uk') %}
-{% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
+### A user's own reviews on their profile page
 
-{# Site-wide average #}
-<p>Average rating: {{ craft.vouch.averageRating()|number_format(1) }} ★</p>
+Pulls reviews where the reviewer's email matched a Craft user account.
 
-{# Average for a specific element (entry / Commerce product) #}
-{% set rating = craft.vouch.ratingForElement(entry.id) %}
-{% if rating %}
-  <p>{{ rating|number_format(1) }} ★ across all sources</p>
-{% endif %}
+```twig
+{% set userReviews = craft.vouch.reviews().reviewerUserId(currentUser.id).all() %}
 
-{# Per-source breakdown for an element #}
+<h2>Your reviews ({{ userReviews|length }})</h2>
+
+{% for review in userReviews %}
+  <article>
+    <h3>{{ review.headline }}</h3>
+    <p>{{ review.rating }} ★ - {{ review.sourceName }} - {{ review.reviewedAt|date('M j, Y') }}</p>
+    <blockquote>{{ review.review }}</blockquote>
+  </article>
+{% else %}
+  <p>You haven't left any reviews yet.</p>
+{% endfor %}
+```
+
+### Per-source breakdown for an element
+
+Useful when you're pulling reviews from more than one provider and want to show each one's average side-by-side.
+
+```twig
 {% for row in craft.vouch.ratingBreakdownForElement(entry.id) %}
   <li>{{ row.sourceName }}: {{ row.average|number_format(1) }} ★ ({{ row.count }})</li>
 {% endfor %}
 ```
 
-Convenience getters on the `Review` element:
+### Filtering by source and rating
+
+Grab the high-rated reviews from one source.
+
+```twig
+{% set google = craft.vouch.source('google-uk') %}
+{% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
+```
+
+### Review getters
+
+Handy getters on each `Review` element:
 
 | Call | Returns |
 |---|---|
@@ -262,7 +312,7 @@ Convenience getters on the `Review` element:
 | `review.providerHandle` | The connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`) |
 | `review.getReviewerUser()` | The Craft `User` element when the reviewer's email matched an account, otherwise `null` |
 
-Twig API surface:
+### Full Twig API
 
 | Call | Returns |
 |---|---|
