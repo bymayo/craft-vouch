@@ -5,6 +5,7 @@ namespace bymayo\vouch\variables;
 use bymayo\vouch\connectors\ConnectorInterface;
 use bymayo\vouch\elements\db\ReviewQuery;
 use bymayo\vouch\elements\Review;
+use bymayo\vouch\models\Settings;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\Vouch;
 
@@ -63,6 +64,16 @@ class VouchVariable
     public function pluginName(): string
     {
         return Vouch::getInstance()->getSettings()->pluginName;
+    }
+
+    /**
+     * The plugin's settings model, so templates can reach things like
+     * `craft.vouch.settings.headlineMaxLength` without the verbose
+     * `craft.app.plugins.getPlugin('vouch').getSettings()` dance.
+     */
+    public function getSettings(): Settings
+    {
+        return Vouch::getInstance()->getSettings();
     }
 
     /**

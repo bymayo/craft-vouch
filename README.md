@@ -148,12 +148,12 @@ Manual sources can still have `Require manual approval` toggled on - moderation 
 
 ## Front-end review submissions
 
-For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anonymous-allowed) and it hard-rejects non-Manual sources, so customer submissions can't sneak past Trustpilot/Feefo moderation.
+Drop a form on your front-end so customers can leave reviews directly through your site. Submissions are accepted against Manual sources only.
 
 ```twig
 {# `review` and `requiresLogin` are populated by the controller when validation
    fails so the form re-renders with the user's input + per-field errors. #}
-{% set vouchSettings = craft.app.plugins.getPlugin('vouch').getSettings() %}
+{% set vouchSettings = craft.vouch.settings %}
 
 <form method="post">
   {{ csrfInput() }}
@@ -371,6 +371,7 @@ Twig API surface:
 | `craft.vouch.ratingForElement(elementId)` | Average rating across approved reviews for one element |
 | `craft.vouch.ratingBreakdownForElement(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
 | `craft.vouch.pluginName()` | The configured plugin name |
+| `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.headlineMaxLength`) |
 
 ## GraphQL
 
