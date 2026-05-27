@@ -301,9 +301,9 @@ Grab the high-rated reviews from one source.
 {% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
 ```
 
-### Review getters
+### Review properties
 
-Handy getters on each `Review` element:
+When you loop over results from `craft.vouch.reviews()`, each review element exposes the usual fields (`headline`, `review`, `rating`, `reviewerName`, `reviewerEmail`, `reviewedAt`, etc.) plus these extras:
 
 | Call | Returns |
 |---|---|
