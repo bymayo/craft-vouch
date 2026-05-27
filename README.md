@@ -20,6 +20,12 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight int
 - **Developer APIs** - chainable Twig query, GraphQL types and queries, and events for your own integrations
 - **Cron syncing** - schedule pulls per source or all at once, with sync buttons throughout the CP for ad-hoc runs
 
+> [!TIP]
+> **Part of a suite.** Vouch is one of a wider set of plugins built for Commerce stores - pair them up for a more complete setup:
+> - [Commerce Widgets](https://plugins.craftcms.com/commerce-widgets?craft5) - sales, revenue and order dashboard widgets for your Commerce store
+> - [Points](https://plugins.craftcms.com/points?craft5) - reward customers with loyalty points or site credit to spend at checkout
+> - [Curated](https://plugins.craftcms.com/curated?craft5) - build hand-picked product collections for your Commerce store
+
 ## Contents
 
 - [Install](#install)
