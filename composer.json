@@ -1,6 +1,6 @@
 {
   "name": "bymayo/vouch",
-  "description": "Pull and manage reviews from Google, Trustpilot, Feefo and Reviews.io in Craft CMS",
+  "description": "Customer reviews for Craft CMS - pull from Google, Trustpilot, Feefo and Reviews.io, or collect your own.",
   "version": "5.0.0",
   "type": "craft-plugin",
   "license": "proprietary",
