@@ -2,7 +2,7 @@
 
 # Vouch for Craft CMS 5
 
-Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more on the way) straight into Craft - or collect your own through the CP and a front-end form. Relate ratings to any element (entries, products, users, categories - you name it), block the spam, and render everything through Twig or GraphQL. You can also view and approve reviews straight from your dashboard with built-in widgets.
+Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight into Craft - or collect your own through the CP and a front-end form. Relate ratings to any element (entries, products, users, categories - you name it), block the spam, and render everything through Twig or GraphQL. You can also view and approve reviews straight from your dashboard with built-in widgets.
 
 <img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/resources/screenshot.png" width="850">
 
@@ -11,14 +11,14 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more o
 - **Multiple providers** - Google, Trustpilot, Feefo, Reviews.io (with more on the way), plus a Manual source for CP and front-end submissions
 - **Renameable** - call it "Reviews", "Testimonials", "VIP Feedback"… whatever fits the site
 - **Per-source moderation** - manual approval, minimum ratings, auto-approve thresholds
-- **Front-end submission form** - CSRF, validation, length caps and attribution-forgery defences baked in
+- **Front-end submission form** - CSRF, validation, length caps, honeypot and per-IP rate limiting baked in
 - **User matching** - reviews automatically link back to existing Craft users when the email matches an account
-- **Element-index integration** - Rating columns on Entries, Commerce Products and Users, plus a "Reviews" tab on the user edit page
+- **Element-index integration** - Rating column on Entries and Commerce Products, Reviews count column on Users, plus a "Reviews" tab on the user edit page
 - **Dashboard widgets** - Reviews Pending Approval, Latest Reviews, Top Reviewed Elements, and a Sources widget with one-click sync
 - **Bulk approve** - tidy up the pending queue in one go
 - **Granular permissions** - View / Create / Edit / Delete / Approve / Sync, each on its own switch
 - **Developer APIs** - chainable Twig query, GraphQL types and queries, and events for your own integrations
-- **Sync orchestration** - cron-driven, queue-aware, with per-source sync buttons and CLI commands
+- **Cron syncing** - schedule pulls per source or all at once, with sync buttons throughout the CP for ad-hoc runs
 
 ## Contents
 
@@ -163,7 +163,6 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
 
   {# Honeypot - real users won't fill this, but bots will #}
   <input type="text" name="vouchHoneypot" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;">
-
 
   {# Show any error returned after submission #}
   {% set errorMsg = craft.app.session.getFlash('error') %}
@@ -330,8 +329,7 @@ Each review element returned by `craft.vouch.reviews()` exposes:
 | `craft.vouch.averageRating(sourceId?)` | Site-wide or per-source average rating |
 | `craft.vouch.ratingForElement(elementId)` | Average rating across approved reviews for one element |
 | `craft.vouch.ratingBreakdownForElement(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
-| `craft.vouch.pluginName()` | The configured plugin name |
-| `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.headlineMaxLength`) |
+| `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.pluginName`) |
 
 ## Sync
 
@@ -450,12 +448,12 @@ Event::on(
 );
 ```
 
-| Event | When |
+| Event | When it fires |
 |---|---|
-| `Reviews::EVENT_AFTER_SYNC_REVIEW` | Every successful upsert (with `isNew` flag) |
-| `Reviews::EVENT_AFTER_APPROVE_REVIEW` | Exactly once per review when it becomes approved |
-| `Sync::EVENT_BEFORE_SOURCE_SYNC` | Cancellable - set `$event->cancelled = true` to skip the run |
-| `Sync::EVENT_AFTER_SOURCE_SYNC` | Carries the populated `SyncResult` |
+| `Reviews::EVENT_AFTER_SYNC_REVIEW` | After a review is created or updated during sync. `$event->isNew` tells you which. |
+| `Reviews::EVENT_AFTER_APPROVE_REVIEW` | Once per review, the moment it goes live. Won't re-fire on re-syncs. |
+| `Sync::EVENT_BEFORE_SOURCE_SYNC` | Just before a source syncs. Set `$event->cancelled = true` to skip it. |
+| `Sync::EVENT_AFTER_SOURCE_SYNC` | After a source sync finishes. `$event->result` has the counts and any errors. |
 
 ## Nice to know
 
