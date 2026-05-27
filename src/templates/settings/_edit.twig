@@ -95,4 +95,26 @@
         size: 5,
         errors: settings.getErrors('reviewMaxLength'),
     }) }}
+
+    {{ forms.textField({
+        label: 'Submission rate limit'|t('vouch'),
+        instructions: 'Max front-end submissions allowed per IP within the rate window. 0 = no limit.'|t('vouch'),
+        id: 'submissionRateLimit',
+        name: 'settings[submissionRateLimit]',
+        value: settings.submissionRateLimit,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('submissionRateLimit'),
+    }) }}
+
+    {{ forms.textField({
+        label: 'Submission rate window (seconds)'|t('vouch'),
+        instructions: 'Rolling window in seconds for the rate limit above.'|t('vouch'),
+        id: 'submissionRateWindow',
+        name: 'settings[submissionRateWindow]',
+        value: settings.submissionRateWindow,
+        type: 'number',
+        size: 5,
+        errors: settings.getErrors('submissionRateWindow'),
+    }) }}
 {% endblock %}

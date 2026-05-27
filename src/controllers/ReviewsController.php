@@ -173,6 +173,7 @@ class ReviewsController extends Controller
         $this->requirePostRequest();
         $request = Craft::$app->getRequest();
         $vouch = Vouch::getInstance();
+        $settings = $vouch->getSettings();
 
         $sourceHandle = (string) $request->getBodyParam('sourceHandle', '');
         $source = $sourceHandle ? $vouch->sources->getSourceByHandle($sourceHandle) : null;
@@ -184,6 +185,43 @@ class ReviewsController extends Controller
         // the public bypass the provider's own moderation entirely.
         if ($source->providerHandle !== ManualConnector::handle()) {
             throw new BadRequestHttpException('Front-end submissions are only allowed for Manual sources.');
+        }
+
+        // Honeypot: a hidden `vouchHoneypot` field that real users never see
+        // and bots tend to fill in. Anything non-empty is treated as spam.
+        // We respond with a fake success so the bot doesn't learn it's been
+        // caught and try a different approach.
+        if (trim((string) $request->getBodyParam('vouchHoneypot', '')) !== '') {
+            if ($request->getAcceptsJson()) {
+                return $this->asJson(['ok' => true]);
+            }
+            return $this->redirectToPostedUrl();
+        }
+
+        // Per-IP rate limiting using Craft's cache - a sliding window of
+        // submission timestamps. Old entries fall out as the window moves.
+        if ($settings->submissionRateLimit > 0 && $settings->submissionRateWindow > 0) {
+            $ip = (string) $request->getUserIP();
+            if ($ip !== '') {
+                $cache = Craft::$app->getCache();
+                $key = 'vouch.submitRate.' . hash('sha256', $ip);
+                $now = time();
+                $cutoff = $now - $settings->submissionRateWindow;
+                $timestamps = array_filter((array) ($cache->get($key) ?: []), fn($t) => $t > $cutoff);
+
+                if (count($timestamps) >= $settings->submissionRateLimit) {
+                    $message = Craft::t('vouch', 'Too many submissions - please try again in a moment.');
+                    if ($request->getAcceptsJson()) {
+                        return $this->asJson(['ok' => false, 'message' => $message])
+                            ->setStatusCode(429);
+                    }
+                    Craft::$app->getSession()->setError($message);
+                    return null;
+                }
+
+                $timestamps[] = $now;
+                $cache->set($key, $timestamps, $settings->submissionRateWindow);
+            }
         }
 
         $review = $vouch->reviews->newManualReview($source);

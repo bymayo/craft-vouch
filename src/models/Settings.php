@@ -66,11 +66,22 @@ class Settings extends Model
      */
     public int $reviewMaxLength = 2000;
 
+    /**
+     * Maximum number of front-end submissions allowed per IP within
+     * `submissionRateWindow` seconds. Set to 0 to disable rate limiting.
+     */
+    public int $submissionRateLimit = 5;
+
+    /**
+     * Rolling window (in seconds) for the per-IP submission rate limit.
+     */
+    public int $submissionRateWindow = 60;
+
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
         $rules[] = [['pluginName'], 'required'];
-        $rules[] = [['emailRetentionDays', 'backfillDays', 'headlineMaxLength', 'reviewMaxLength'], 'integer', 'min' => 0];
+        $rules[] = [['emailRetentionDays', 'backfillDays', 'headlineMaxLength', 'reviewMaxLength', 'submissionRateLimit', 'submissionRateWindow'], 'integer', 'min' => 0];
         $rules[] = [['autoApproveThreshold'], 'number', 'min' => 0, 'max' => 5];
         $rules[] = [['matchAuthorsToUsers', 'requireLoginForKnownEmails'], 'boolean'];
         return $rules;

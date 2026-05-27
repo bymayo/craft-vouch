@@ -163,6 +163,10 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
   {# Optional: tie the review to a specific entry / product #}
   <input type="hidden" name="relatedElementId" value="{{ entry.id ?? '' }}">
 
+  {# Honeypot - real users won't fill this, but bots will #}
+  <input type="text" name="vouchHoneypot" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;">
+
+
   {# Show any error returned after submission #}
   {% set errorMsg = craft.app.session.getFlash('error') %}
   {% if errorMsg %}
@@ -216,6 +220,7 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
 | `reviewerName` | Yes | Display name shown alongside the review |
 | `reviewerEmail` | Yes | Used for moderation and user matching |
 | `relatedElementId` | No | Tie the review to a specific entry, product, user, etc. |
+| `vouchHoneypot` | No | Hidden honeypot - leave empty. Any value silently discards the submission |
 
 ## Sync
 
@@ -246,9 +251,11 @@ The reviewer's email is stored for moderation and contact only. A review is only
 
 ### Locking it down further
 
+Vouch comes with a honeypot field and per-IP rate limiting baked in - just include the `vouchHoneypot` input in your form (see the example above) and tweak `submissionRateLimit` / `submissionRateWindow` in Settings to taste. For extra peace of mind:
+
 - Turn on **"Require manual approval"** on the source so reviews stay Pending until an admin approves them.
 - Restrict the form to logged-in users with `{% requireLogin %}`.
-- For anonymous forms, add the usual extras: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email check.
+- Add a CAPTCHA (hCaptcha / reCAPTCHA) if you're getting a lot of traffic from anonymous users.
 
 Reviews that aren't from Manual sources (e.g. Google, Trustpilot, etc.) don't go through any of this - those emails come straight from the provider.
 
@@ -294,6 +301,8 @@ Settings live at **Settings → Plugins → Vouch** in the CP, and can be overri
 | `requireLoginForKnownEmails` | `true` | Reject front-end submissions whose email matches an existing Craft user, unless they're logged in as that user. |
 | `headlineMaxLength` | `120` | Max characters allowed in a manual review's headline. `0` disables. |
 | `reviewMaxLength` | `2000` | Max characters allowed in a manual review body. `0` disables. |
+| `submissionRateLimit` | `5` | Max front-end submissions allowed per IP within the rate window. `0` disables. |
+| `submissionRateWindow` | `60` | Rolling window (in seconds) for the per-IP submission rate limit. |
 
 ## Permissions
 
