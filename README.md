@@ -65,8 +65,6 @@ You can also install the plugin via the Plugin Store in the Craft Admin CP by se
 | Reviews.io | Merchant Reviews API | Store ID + API key |
 | Manual | Authored in the CP or via front-end form | n/a |
 
-All credential fields accept `$ENV_VAR` references via `App::parseEnv()`. Keep your secrets in `.env` and reference them like `$GOOGLE_PLACES_API_KEY` so production credentials don't end up in `project.yaml`.
-
 ## Setting up a source
 
 A source is a single feed of reviews tied to a provider. You might set up a Google Reviews source to pull in your overall company reviews, a Reviews.io source for product reviews, or a Manual source for testimonials you collect yourself - you can have as many as you like, mixing and matching providers as you go.
@@ -175,8 +173,8 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
     </p>
   {% endif %}
 
-  <label for="vouch-rating">Rating *</label>
-  <select id="vouch-rating" name="rating" required>
+  <label for="rating">Rating *</label>
+  <select id="rating" name="rating" required>
     <option value="">Choose a rating…</option>
     <option value="5">5 ★★★★★</option>
     <option value="4">4 ★★★★</option>
@@ -186,22 +184,20 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
   </select>
   {% for err in (review.getErrors('rating') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
-  <label for="vouch-headline">Headline *</label>
-  <input id="vouch-headline" name="headline" value="{{ review.headline ?? '' }}"
-         {% if vouchSettings.headlineMaxLength > 0 %}maxlength="{{ vouchSettings.headlineMaxLength }}"{% endif %} required>
+  <label for="headline">Headline *</label>
+  <input id="headline" name="headline" value="{{ review.headline ?? '' }}" required>
   {% for err in (review.getErrors('headline') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
-  <label for="vouch-review">Review *</label>
-  <textarea id="vouch-review" name="review"
-            {% if vouchSettings.reviewMaxLength > 0 %}maxlength="{{ vouchSettings.reviewMaxLength }}"{% endif %} required>{{ review.review ?? '' }}</textarea>
+  <label for="review">Review *</label>
+  <textarea id="review" name="review" required>{{ review.review ?? '' }}</textarea>
   {% for err in (review.getErrors('review') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
-  <label for="vouch-reviewer-name">Reviewer name *</label>
-  <input id="vouch-reviewer-name" name="reviewerName" value="{{ review.reviewerName ?? '' }}" required>
+  <label for="reviewerName">Reviewer name *</label>
+  <input id="reviewerName" name="reviewerName" value="{{ review.reviewerName ?? '' }}" required>
   {% for err in (review.getErrors('reviewerName') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
-  <label for="vouch-reviewer-email">Reviewer email *</label>
-  <input id="vouch-reviewer-email" name="reviewerEmail" type="email" value="{{ review.reviewerEmail ?? '' }}" required>
+  <label for="reviewerEmail">Reviewer email *</label>
+  <input id="reviewerEmail" name="reviewerEmail" type="email" value="{{ review.reviewerEmail ?? '' }}" required>
   {% for err in (review.getErrors('reviewerEmail') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <button type="submit">Submit review</button>
