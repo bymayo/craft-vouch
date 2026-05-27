@@ -34,8 +34,7 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more o
 - [Front-end review submissions](#front-end-review-submissions)
 - [Sync](#sync)
 - [Attribution & spam controls](#attribution--spam-controls)
-- [Element-index integration](#element-index-integration)
-- [Users integration](#users-integration)
+- [Element integration](#element-integration)
 - [Dashboard widgets](#dashboard-widgets)
 - [Reviews index actions](#reviews-index-actions)
 - [Settings](#settings)
@@ -259,16 +258,15 @@ Vouch comes with a honeypot field and per-IP rate limiting baked in - just inclu
 
 Reviews that aren't from Manual sources (e.g. Google, Trustpilot, etc.) don't go through any of this - those emails come straight from the provider.
 
-## Element-index integration
+## Element integration
 
-Entries and Commerce Products get an opt-in **"Rating"** column showing the average across all approved reviews tied to that element. Switch it on via the column settings on the element index. The entry/product edit page also picks up a sidebar summary with the overall average and a per-source breakdown.
+Vouch wires ratings into Craft's own element indexes and edit pages so reviews surface where you'd expect them. Each column is opt-in - turn it on via the column settings cog on the element index.
 
-The "Rating" column deep-links back to the reviews index pre-filtered by that element.
-
-## Users integration
-
-- **"Reviews" column** on the Users element index showing how many approved reviews each user has authored (matched via `reviewerUserId`).
-- **"Reviews" screen** on the user edit page - same spot Commerce adds its "Commerce" tab. Embeds the reviews element index pre-filtered to that user, with the sidebar label using your configured `pluginName`. Visible to users with `vouch-viewReviews`.
+| Element | What you get | How to enable |
+|---|---|---|
+| **Entries** | A **Rating** column on the index, plus a sidebar block on the entry edit page showing the average and a per-source breakdown. The column links through to the filtered reviews index. | Element index → cog icon → tick **Rating** |
+| **Commerce Products** | Same as Entries - Rating column + sidebar block on the product edit page. | Element index → cog icon → tick **Rating** |
+| **Users** | A **Reviews** column on the users index (count of approved reviews authored), plus a **Reviews** screen on the user edit page (same spot Commerce adds its Commerce tab). | Users index → cog icon → tick **Reviews**. The edit-page screen appears for anyone with `vouch-viewReviews`. |
 
 ## Dashboard widgets
 
