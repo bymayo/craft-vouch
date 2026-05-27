@@ -150,9 +150,9 @@ Manual sources can still have `Require manual approval` toggled on - moderation 
 
 Drop a form on your front-end so customers can leave reviews directly through your site. Submissions are accepted against Manual sources only.
 
+On a failed submission, Vouch repopulates a `review` variable with the user's input and errors.
+
 ```twig
-{# `review` and `requiresLogin` are populated by the controller when validation
-   fails so the form re-renders with the user's input + per-field errors. #}
 {% set vouchSettings = craft.vouch.settings %}
 
 <form method="post">
@@ -163,7 +163,7 @@ Drop a form on your front-end so customers can leave reviews directly through yo
   {# Optional: tie the review to a specific entry / product #}
   <input type="hidden" name="relatedElementId" value="{{ entry.id ?? '' }}">
 
-  {# Flash error banner - covers controller-level failures #}
+  {# Show any error returned after submission #}
   {% set errorMsg = craft.app.session.getFlash('error') %}
   {% if errorMsg %}
     <p class="error" role="alert">
@@ -207,12 +207,19 @@ Drop a form on your front-end so customers can leave reviews directly through yo
 </form>
 ```
 
-**Required:** `sourceHandle`, `rating`, `headline`, `review`, `reviewerName`, `reviewerEmail`.
-**Optional:** `relatedElementId`.
+| Field | Required | Notes |
+|---|---|---|
+| `sourceHandle` | Yes | The handle of the Manual source to submit against |
+| `rating` | Yes | Numeric rating from 1-5 |
+| `headline` | Yes | Short title for the review |
+| `review` | Yes | The review body |
+| `reviewerName` | Yes | Display name shown alongside the review |
+| `reviewerEmail` | Yes | Used for moderation and user matching |
+| `relatedElementId` | No | Tie the review to a specific entry, product, user, etc. |
 
 ## Sync
 
-Sync runs inline - just point cron at it. There's no per-source schedule in the CP; the cron entry *is* the schedule.
+Set up a cron job to pull in new reviews on a schedule. You decide how often it runs.
 
 ```bash
 # Every enabled source, hourly
@@ -227,9 +234,15 @@ The argument on `vouch/sync/source` is the **handle** you set when creating the 
 
 ## Attribution & spam controls
 
-`reviewerEmail` is captured for moderation / contact, but Vouch will **only attribute** a review to a Craft user (`reviewerUserId`) when the submitter is logged in AND the email they submit matches the email on their own account. That shuts down the forge-by-email attribution trick.
+Vouch has a few protections built in to stop fake or forged reviews coming through your front-end form.
 
-Even with attribution locked down, an anonymous attacker could still *plant* a review under a real user's email. To stop that, the `requireLoginForKnownEmails` setting (on by default) rejects any submission whose email belongs to an existing Craft user unless the submitter is logged in as them. The response is JSON when `Accept: application/json` is set:
+### How emails are handled
+
+The reviewer's email is stored for moderation and contact only. A review is only linked to a Craft user when the submitter is logged in and uses their own account email - so no one can claim to be someone else.
+
+### Blocking impersonators
+
+`requireLoginForKnownEmails` (on by default) rejects any submission whose email already belongs to a Craft user, unless they're logged in as that user. JSON responses look like:
 
 ```json
 {
@@ -240,16 +253,16 @@ Even with attribution locked down, an anonymous attacker could still *plant* a r
 }
 ```
 
-For HTML submits, the controller flashes an error message and sets a `requiresLogin` route param the template can read.
+HTML submits get a flash error and a `requiresLogin` route param the template can read.
 
-If you want every front-end review checked before it goes live, layer on the usual defences:
+### Locking it down further
 
-- Turn on **"Require manual approval"** on the source so reviews land Pending until an admin approves.
-- Lock the submit form down to logged-in users (`{% requireLogin %}` at the top of the template, or check `currentUser` before rendering).
-- For anonymous-allowed forms, bring out the usual public-form toolkit: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email format check.
-- Use the `EVENT_AFTER_SYNC_REVIEW` event to run your own spam scoring (Akismet, OOPSpam, that sort of thing) and flip `$review->approved = false` for anything dodgy.
+- Turn on **"Require manual approval"** on the source so reviews stay Pending until an admin approves them.
+- Restrict the form to logged-in users with `{% requireLogin %}`.
+- For anonymous forms, add the usual extras: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email check.
+- Hook into `EVENT_AFTER_SYNC_REVIEW` to plug in spam scoring (Akismet, OOPSpam, etc.) and set `$review->approved = false` for anything dodgy.
 
-The sync path (Google / Trustpilot / Feefo / Reviews.io) still auto-matches emails to Craft users - those emails come from the provider rather than anonymous user input, so the same trust concern doesn't apply.
+Reviews pulled from Google, Trustpilot, Feefo and Reviews.io don't go through any of this - those emails come straight from the provider.
 
 ## Element-index integration
 
