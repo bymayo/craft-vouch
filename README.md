@@ -242,27 +242,15 @@ The reviewer's email is stored for moderation and contact only. A review is only
 
 ### Blocking impersonators
 
-`requireLoginForKnownEmails` (on by default) rejects any submission whose email already belongs to a Craft user, unless they're logged in as that user. JSON responses look like:
-
-```json
-{
-  "ok": false,
-  "requiresLogin": true,
-  "loginUrl": "https://example.com/login",
-  "message": "That email belongs to a registered account. Please log in to leave a review."
-}
-```
-
-HTML submits get a flash error and a `requiresLogin` route param the template can read.
+`requireLoginForKnownEmails` (on by default) rejects any submission whose email already belongs to a Craft user, unless they're logged in as that user.
 
 ### Locking it down further
 
 - Turn on **"Require manual approval"** on the source so reviews stay Pending until an admin approves them.
 - Restrict the form to logged-in users with `{% requireLogin %}`.
 - For anonymous forms, add the usual extras: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email check.
-- Hook into `EVENT_AFTER_SYNC_REVIEW` to plug in spam scoring (Akismet, OOPSpam, etc.) and set `$review->approved = false` for anything dodgy.
 
-Reviews pulled from Google, Trustpilot, Feefo and Reviews.io don't go through any of this - those emails come straight from the provider.
+Reviews that aren't from Manual sources (e.g. Google, Trustpilot, etc.) don't go through any of this - those emails come straight from the provider.
 
 ## Element-index integration
 
