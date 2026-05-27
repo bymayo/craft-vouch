@@ -2,13 +2,7 @@
 
 namespace bymayo\vouch;
 
-use bymayo\vouch\connectors\feefo\FeefoConnector;
-use bymayo\vouch\connectors\google\GoogleConnector;
-use bymayo\vouch\connectors\manual\ManualConnector;
-use bymayo\vouch\connectors\reviewsio\ReviewsioConnector;
-use bymayo\vouch\connectors\trustpilot\TrustpilotConnector;
 use bymayo\vouch\elements\Review;
-use bymayo\vouch\events\RegisterProvidersEvent;
 use bymayo\vouch\gql\types\ReviewType;
 use bymayo\vouch\models\Settings;
 use bymayo\vouch\services\ProviderRegistry;
@@ -476,20 +470,6 @@ class Vouch extends Plugin
 
     private function attachEventHandlers(): void
     {
-        // Register Vouch's own built-in connectors. Third-party providers
-        // attach to the same event from their own plugin's init().
-        Event::on(
-            ProviderRegistry::class,
-            ProviderRegistry::EVENT_REGISTER_PROVIDERS,
-            function(RegisterProvidersEvent $event) {
-                $event->types[] = ManualConnector::class;
-                $event->types[] = GoogleConnector::class;
-                $event->types[] = TrustpilotConnector::class;
-                $event->types[] = FeefoConnector::class;
-                $event->types[] = ReviewsioConnector::class;
-            }
-        );
-
         Event::on(
             Elements::class,
             Elements::EVENT_REGISTER_ELEMENT_TYPES,
