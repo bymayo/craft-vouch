@@ -30,6 +30,7 @@ use craft\helpers\App;
 class TrustpilotConnector extends BaseConnector
 {
     public const ENDPOINT = 'https://api.trustpilot.com/v1/business-units/';
+    public const ENDPOINT_SEARCH = 'https://api.trustpilot.com/v1/business-units/search';
 
     public static function handle(): string
     {
@@ -60,7 +61,7 @@ class TrustpilotConnector extends BaseConnector
             [
                 'handle' => 'businessUnitId',
                 'label' => 'Business Unit ID',
-                'instructions' => 'Your Trustpilot business unit id (24-char hex). Find it via the “Find a business unit” endpoint or your business profile URL.',
+                'instructions' => 'Your Trustpilot business unit ID (24-char hex). Use the "Find a Business Unit" helper below, or paste it manually if you already have it.',
                 'type' => 'text',
                 'required' => true,
             ],
@@ -180,5 +181,54 @@ class TrustpilotConnector extends BaseConnector
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Free-text search for Trustpilot business units, returning candidate
+     * matches with their Business Unit IDs. Used by the "Find a Business Unit"
+     * helper on the source edit page so admins can avoid hand-pasting an ID.
+     *
+     * @return array<int, array{id: string, displayName: string, websiteUrl: string}>
+     * @throws \RuntimeException when the API key is rejected or returns an error
+     */
+    public static function searchBusinessUnits(string $apiKey, string $query): array
+    {
+        $apiKey = trim($apiKey);
+        $query = trim($query);
+        if ($apiKey === '' || $query === '') {
+            throw new \RuntimeException('Both an API key and a search query are required.');
+        }
+
+        $client = Craft::createGuzzleClient(['timeout' => 15]);
+
+        $response = $client->request('GET', self::ENDPOINT_SEARCH, [
+            'query' => [
+                'apikey' => $apiKey,
+                'query' => $query,
+                'perPage' => 20,
+            ],
+            'headers' => ['Accept' => 'application/json'],
+            'http_errors' => false,
+        ]);
+
+        $status = $response->getStatusCode();
+        $decoded = json_decode((string) $response->getBody(), true);
+
+        if ($status >= 400) {
+            $message = $decoded['message']
+                ?? $decoded['details']
+                ?? sprintf('Trustpilot API returned HTTP %d.', $status);
+            throw new \RuntimeException(is_string($message) ? $message : 'Trustpilot API error.');
+        }
+
+        if (!is_array($decoded)) {
+            throw new \RuntimeException('Trustpilot API returned an unparseable response.');
+        }
+
+        return array_map(fn(array $row) => [
+            'id' => (string) ($row['id'] ?? ''),
+            'displayName' => (string) ($row['displayName'] ?? $row['name']['identifying'] ?? ''),
+            'websiteUrl' => (string) ($row['websiteUrl'] ?? ''),
+        ], $decoded['businessUnits'] ?? []);
     }
 }

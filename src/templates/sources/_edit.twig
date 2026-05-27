@@ -150,6 +150,27 @@
                     {% endif %}
                 {% endfor %}
 
+                {% if handle == 'trustpilot' %}
+                    {# Search by name/domain to find the right Business Unit ID. #}
+                    <div class="vouch-trustpilot-finder"
+                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
+                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Find a Business Unit'|t('vouch') }}</h3>
+                        <p class="light" style="margin:0 0 10px 0;">
+                            {{ 'Search Trustpilot by company name or domain. Requires the API key above to be filled in.'|t('vouch') }}
+                        </p>
+                        <div style="display:flex;gap:8px;align-items:flex-start;">
+                            <input type="text" class="text fullwidth vouch-trustpilot-finder-query"
+                                   placeholder="{{ 'E.g. yourdomain.com or company name…'|t('vouch') }}"
+                                   style="flex:1;">
+                            <button type="button" class="btn submit vouch-trustpilot-finder-button">
+                                {{ 'Search'|t('vouch') }}
+                            </button>
+                        </div>
+                        <div class="vouch-trustpilot-finder-status light smalltext" style="margin-top:8px;"></div>
+                        <ul class="vouch-trustpilot-finder-results" style="margin:10px 0 0 0;padding:0;list-style:none;"></ul>
+                    </div>
+                {% endif %}
+
                 {% if handle == 'google' %}
                     {# Places-mode helper: Search by text to find the right Place ID.
                        Hidden when the Business Profile mode is active. #}
@@ -338,6 +359,97 @@
                         return;
                     }
                     renderResults(json.places || []);
+                })
+                .catch(function(err) {
+                    setStatus(err.message || 'Search failed.', true);
+                })
+                .finally(function() { btn.disabled = false; });
+            });
+
+            queryInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+            });
+        })();
+    {% endjs %}
+
+    {% js %}
+        // Trustpilot Business Unit finder - POSTs to the controller proxy
+        // with the user-entered API key + query, then renders the matching
+        // business units as clickable rows that auto-fill the ID input.
+        (function() {
+            var block = document.querySelector('.vouch-schema-block[data-provider="trustpilot"]');
+            if (!block) return;
+
+            var btn = block.querySelector('.vouch-trustpilot-finder-button');
+            var queryInput = block.querySelector('.vouch-trustpilot-finder-query');
+            var statusEl = block.querySelector('.vouch-trustpilot-finder-status');
+            var resultsEl = block.querySelector('.vouch-trustpilot-finder-results');
+            var apiKeyInput = block.querySelector('input[name="credentials[apiKey]"]');
+            var businessUnitIdInput = block.querySelector('input[name="settings[businessUnitId]"]');
+            if (!btn || !queryInput || !apiKeyInput || !businessUnitIdInput) return;
+
+            function setStatus(msg, isError) {
+                statusEl.textContent = msg || '';
+                statusEl.style.color = isError ? 'var(--error-color, #c33)' : '';
+            }
+
+            function renderResults(units) {
+                resultsEl.innerHTML = '';
+                if (!units.length) {
+                    setStatus({{ 'No matches found.'|t('vouch')|json_encode|raw }}, false);
+                    return;
+                }
+                setStatus('', false);
+                units.forEach(function(u) {
+                    var li = document.createElement('li');
+                    li.style.cssText = 'padding:8px;border:1px solid var(--hairline-color);border-radius:4px;margin-top:6px;cursor:pointer;';
+                    li.innerHTML = '<strong></strong><div class="light smalltext"></div><code class="smalltext"></code>';
+                    li.querySelector('strong').textContent = u.displayName || '(unnamed)';
+                    li.querySelector('.light').textContent = u.websiteUrl || '';
+                    li.querySelector('code').textContent = u.id;
+                    li.addEventListener('click', function() {
+                        businessUnitIdInput.value = u.id;
+                        businessUnitIdInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        setStatus({{ 'Business Unit ID applied.'|t('vouch')|json_encode|raw }}, false);
+                    });
+                    resultsEl.appendChild(li);
+                });
+            }
+
+            btn.addEventListener('click', function() {
+                var apiKey = apiKeyInput.value.trim();
+                var query = queryInput.value.trim();
+                if (!apiKey) {
+                    setStatus({{ 'Enter an API key above first.'|t('vouch')|json_encode|raw }}, true);
+                    return;
+                }
+                if (!query) {
+                    setStatus({{ 'Enter a search query.'|t('vouch')|json_encode|raw }}, true);
+                    return;
+                }
+
+                btn.disabled = true;
+                setStatus({{ 'Searching…'|t('vouch')|json_encode|raw }}, false);
+                resultsEl.innerHTML = '';
+
+                var data = new FormData();
+                data.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                data.append('action', 'vouch/sources/find-trustpilot-business-unit');
+                data.append('apiKey', apiKey);
+                data.append('query', query);
+
+                fetch(Craft.getActionUrl('vouch/sources/find-trustpilot-business-unit'), {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: data,
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(json) {
+                    if (!json.ok) {
+                        setStatus(json.message || 'Search failed.', true);
+                        return;
+                    }
+                    renderResults(json.businessUnits || []);
                 })
                 .catch(function(err) {
                     setStatus(err.message || 'Search failed.', true);

@@ -392,6 +392,29 @@ class SourcesController extends Controller
         return $this->asJson(['ok' => true, 'places' => $places]);
     }
 
+    public function actionFindTrustpilotBusinessUnit(): Response
+    {
+        $this->requirePostRequest();
+        $this->requireAcceptsJson();
+
+        $user = Craft::$app->getUser();
+        if (!$user->checkPermission('vouch-createSources') && !$user->checkPermission('vouch-editSources')) {
+            throw new \yii\web\ForbiddenHttpException();
+        }
+
+        $request = Craft::$app->getRequest();
+        $apiKey = \craft\helpers\App::parseEnv((string) $request->getRequiredBodyParam('apiKey'));
+        $query = (string) $request->getRequiredBodyParam('query');
+
+        try {
+            $units = \bymayo\vouch\connectors\trustpilot\TrustpilotConnector::searchBusinessUnits($apiKey, $query);
+        } catch (\Throwable $e) {
+            return $this->asJson(['ok' => false, 'message' => $e->getMessage()]);
+        }
+
+        return $this->asJson(['ok' => true, 'businessUnits' => $units]);
+    }
+
     public function actionTest(): Response
     {
         $this->requirePostRequest();

@@ -485,6 +485,7 @@ class Vouch extends Plugin
                 $event->types[] = \bymayo\vouch\widgets\PendingApprovalWidget::class;
                 $event->types[] = \bymayo\vouch\widgets\LatestReviewsWidget::class;
                 $event->types[] = \bymayo\vouch\widgets\TopReviewedElementsWidget::class;
+                $event->types[] = \bymayo\vouch\widgets\SourcesWidget::class;
             }
         );
 
@@ -511,6 +512,7 @@ class Vouch extends Plugin
                 $event->rules['POST vouch/sources/test'] = 'vouch/sources/test';
                 $event->rules['POST vouch/sources/sync'] = 'vouch/sources/sync';
                 $event->rules['POST vouch/sources/find-google-place'] = 'vouch/sources/find-google-place';
+                $event->rules['POST vouch/sources/find-trustpilot-business-unit'] = 'vouch/sources/find-trustpilot-business-unit';
                 $event->rules['vouch/sources/connect-google'] = 'vouch/sources/connect-google';
                 $event->rules['vouch/sources/google-oauth-callback'] = 'vouch/sources/google-oauth-callback';
 

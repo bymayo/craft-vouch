@@ -1,0 +1,76 @@
+{# @var sources \bymayo\vouch\models\Source[] #}
+{# @var canSync bool #}
+{# @var indexUrl string #}
+
+{% if not sources|length %}
+    <p class="light">{{ 'No sources configured.'|t('vouch') }} <a href="{{ indexUrl }}">{{ 'Create one'|t('vouch') }}</a></p>
+{% else %}
+    {% for source in sources %}
+        <div class="vouch-widget-source" style="{% if not loop.first %}margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--gray-200);{% endif %}">
+            <strong style="display: block; margin-bottom: 8px;">{{ source.name }}</strong>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                {% if canSync %}
+                    <button type="button" class="btn small vouch-sync-btn" data-source-id="{{ source.id }}" {% if not source.enabled %}disabled{% endif %}>
+                        <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('arrows-rotate') }}</span>{{ 'Sync'|t('vouch') }}
+                    </button>
+                {% endif %}
+                <a href="{{ cpUrl('vouch/sources/' ~ source.id) }}" class="btn small">
+                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('eye') }}</span>{{ 'View'|t('vouch') }}
+                </a>
+            </div>
+            <span class="light" style="font-size: 11px; display: block; margin-top: 8px;">
+                {{ 'Last Synced:'|t('vouch') }}
+                {% if source.lastSyncedAt %}
+                    {{ source.lastSyncedAt|datetime('short') }}
+                {% else %}
+                    {{ 'Never'|t('vouch') }}
+                {% endif %}
+            </span>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<script type="text/javascript">
+(function() {
+    document.querySelectorAll('.vouch-sync-btn').forEach(function(btn) {
+        if (btn.dataset.vouchBound) return;
+        btn.dataset.vouchBound = '1';
+        btn.addEventListener('click', function() {
+            var sourceId = this.getAttribute('data-source-id');
+            var button = this;
+
+            button.classList.add('loading');
+            button.disabled = true;
+
+            var body = new FormData();
+            body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+            body.append('sourceId', sourceId);
+
+            fetch(Craft.actionUrl + '/vouch/sources/sync', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: body
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                button.classList.remove('loading');
+                button.disabled = false;
+
+                if (data && data.ok) {
+                    Craft.cp.displayNotice(data.message || '{{ 'Sync complete.'|t('vouch')|e('js') }}');
+                } else {
+                    Craft.cp.displayError((data && data.message) ? data.message : '{{ 'Sync failed.'|t('vouch')|e('js') }}');
+                }
+            })
+            .catch(function() {
+                button.classList.remove('loading');
+                button.disabled = false;
+                Craft.cp.displayError('{{ 'Sync failed.'|t('vouch')|e('js') }}');
+            });
+        });
+    });
+})();
+</script>
