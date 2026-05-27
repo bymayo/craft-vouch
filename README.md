@@ -1,26 +1,24 @@
 <img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/src/icon.svg" width="70">
 
-# Vouch for Craft CMS
+# Vouch for Craft CMS 5
 
-Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight into Craft - or collect your own through the CP and a front-end form. Show ratings on entries and products, keep spam at bay, and roll it all up through Twig, GraphQL and dashboard widgets.
+Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more on the way) straight into Craft - or collect your own through the CP and a front-end form. Relate ratings to any element (entries, products, users, categories - you name it), block the spam, and render everything through Twig or GraphQL. You can also view and approve reviews straight from your dashboard with built-in widgets.
 
 <img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/resources/screenshot.png" width="850">
 
 ## Features
 
-- **Multiple providers** - Google, Trustpilot, Feefo, Reviews.io, plus a Manual source for CP and front-end submissions
+- **Multiple providers** - Google, Trustpilot, Feefo, Reviews.io (with more on the way), plus a Manual source for CP and front-end submissions
 - **Renameable** - call it "Reviews", "Testimonials", "VIP Feedback"… whatever fits the site
 - **Per-source moderation** - manual approval, minimum ratings, auto-approve thresholds
 - **Front-end submission form** - CSRF, validation, length caps and attribution-forgery defences baked in
+- **User matching** - reviews automatically link back to existing Craft users when the email matches an account
 - **Element-index integration** - Rating columns on Entries, Commerce Products and Users, plus a "Reviews" tab on the user edit page
-- **Dashboard widgets** - Reviews Pending Approval, Latest Reviews, Top Reviewed Elements
+- **Dashboard widgets** - Reviews Pending Approval, Latest Reviews, Top Reviewed Elements, and a Sources widget with one-click sync
 - **Bulk approve** - tidy up the pending queue in one go
 - **Granular permissions** - View / Create / Edit / Delete / Approve / Sync, each on its own switch
 - **Developer APIs** - chainable Twig query, GraphQL types and queries, and events for your own integrations
 - **Sync orchestration** - cron-driven, queue-aware, with per-source sync buttons and CLI commands
-- **Find Place ID** - paste a Google API key, type a name, click a match to fill in the Place ID
-- **Encrypted credentials** - API keys and OAuth refresh tokens encrypted with Craft's security key
-- **Extensible** - register your own connector to plug in any third-party review platform
 
 ## Contents
 
@@ -45,7 +43,6 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight int
 - [Twig](#twig)
 - [GraphQL](#graphql)
 - [Events](#events)
-- [Adding your own provider](#adding-your-own-provider)
 - [Support](#support)
 
 ## Install
@@ -74,7 +71,7 @@ All credential fields accept `$ENV_VAR` references via `App::parseEnv()`. Keep y
 
 ## Setting up a source
 
-Each source pairs one credential set with one provider. Source records live in their own DB table (not Project Config), so you can rotate API keys on production without a deploy clobbering them.
+A source is a single feed of reviews tied to a provider. You might set up a Google Reviews source to pull in your overall company reviews, a Reviews.io source for product reviews, or a Manual source for testimonials you collect yourself - you can have as many as you like, mixing and matching providers as you go.
 
 Head to **Vouch → Sources → New source**, choose your provider, fill in the credentials and Save. A "Test connection" check runs automatically on the edit page so you'll know straight away if something's off.
 
@@ -95,7 +92,7 @@ Google sources have a **Mode** dropdown:
 
    Already got a Place ID from Google's [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id)? Paste it in manually instead.
 
-> Google's Places API caps every request at **the 5 most recent reviews** - there's no way to page past that, it's an upstream limit. Sync runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. **Set `backfillDays` to `0` for Places-mode sources** (unlimited history) - the upstream cap already keeps the cost in check.
+> ⚠ Heads up: Google only ever returns **the 5 most recent reviews** on the Places API, and there's no way around it - that's just how their API works. Don't worry though, re-syncing won't create duplicates, you'll always just get the latest 5. **Set `backfillDays` to `0` for Places-mode sources** so you grab everything available.
 
 #### Business Profile API mode
 
@@ -105,7 +102,7 @@ Google sources have a **Mode** dropdown:
 > 2. Get an OAuth 2.0 consent screen verified by Google (its own review process if your scope is "sensitive").
 > 3. Wait for approval - usually weeks, and first-time applicants are often turned down.
 >
-> Without approval the OAuth flow completes fine, but the reviews endpoint comes back with `403 PERMISSION_DENIED`. Vouch shows that error verbatim in the "Test connection" status so you know exactly what's up.
+> Without approval the OAuth flow completes fine, but the reviews endpoint comes back with `403 PERMISSION_DENIED`.
 
 Once you're approved:
 
@@ -116,21 +113,13 @@ Once you're approved:
 5. Fill in the **Location resource name** (`accounts/{accountId}/locations/{locationId}`). You can list your accounts/locations via the [API explorer](https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list) or a quick `curl` against `https://mybusinessaccountmanagement.googleapis.com/v1/accounts`. Save again.
 6. Hit **"Test connection"** to make sure everything's talking.
 
-The refresh token is stored encrypted (same as every other API credential). Access tokens are minted fresh on each sync and never persisted beyond a single request.
-
 ### Trustpilot
 
 1. Sign in to [Trustpilot Business](https://business.trustpilot.com).
 2. Generate an API key under your account's API / Integrations settings. The public tier is plenty for pulling reviews of your own business unit.
-3. Find your **Business Unit ID** with a quick curl using your new key:
-   ```bash
-   curl "https://api.trustpilot.com/v1/business-units/find?name=yourdomain.com" \
-     -H "apikey: YOUR_API_KEY"
-   ```
-   The `id` field in the response is your Business Unit ID.
-4. Paste both into the Trustpilot source edit page.
+3. In Vouch, paste the API key, then use the built-in **"Find a Business Unit"** search box. Type your company name or domain, hit **Search**, and click a match to fill in the Business Unit ID for you.
 
-Trustpilot returns reviews newest-first, and Vouch paginates with cursor early-exit so later syncs only walk the new pages.
+   Already got the Business Unit ID? Just paste it in manually.
 
 ### Feefo
 
@@ -279,15 +268,16 @@ The "Rating" column deep-links back to the reviews index pre-filtered by that el
 
 ## Dashboard widgets
 
-Add via the Craft dashboard → **+ New widget**. All three pick up your `pluginName` rename:
+Add via the Craft dashboard → **+ New widget**. All of them pick up your `pluginName` rename:
 
 | Widget | Shows | Settings |
 |---|---|---|
 | **Reviews Pending Approval** | Reviews awaiting moderation with headline, rating, reviewer + date. Footer links to the pending source on the reviews index. | `limit` |
 | **Latest Reviews** | The most recent approved reviews. Reviewer name links to the matched Craft user when available. | `limit`, `sourceId` (filter to one source, or any) |
 | **Top Reviewed Elements** | Ranks elements by review count or average rating. Column header reflects the chosen element type. | `elementType`, `sectionId` (Entries only), `sort`, `limit` |
+| **Sources** | Each pull-based source (Manual sources are excluded) with its last-synced timestamp and a one-click Sync button. The Sync button needs `vouch-syncSources`. | `sourceId` (filter to one source, or all) |
 
-All three require the `vouch-viewWidgets` permission.
+All widgets require the `vouch-viewWidgets` permission.
 
 ## Reviews index actions
 
@@ -434,39 +424,6 @@ Event::on(
 | `Reviews::EVENT_AFTER_APPROVE_REVIEW` | Exactly once per review when it becomes approved |
 | `Sync::EVENT_BEFORE_SOURCE_SYNC` | Cancellable - set `$event->cancelled = true` to skip the run |
 | `Sync::EVENT_AFTER_SOURCE_SYNC` | Carries the populated `SyncResult` |
-
-## Adding your own provider
-
-Got a review platform Vouch doesn't cover yet? Implement `bymayo\vouch\connectors\ConnectorInterface` (or extend `BaseConnector` for sensible defaults) and register it via the `EVENT_REGISTER_PROVIDERS` event:
-
-```php
-use bymayo\vouch\events\RegisterProvidersEvent;
-use bymayo\vouch\services\ProviderRegistry;
-
-Event::on(
-    ProviderRegistry::class,
-    ProviderRegistry::EVENT_REGISTER_PROVIDERS,
-    function (RegisterProvidersEvent $event) {
-        $event->types[] = MyConnector::class;
-    },
-);
-```
-
-Drop a brand SVG into your plugin and return its markup from `icon()` (or pinch `BaseConnector::loadIcon()`'s pattern with your own resource path).
-
-The connector contract:
-
-| Method | Purpose |
-|---|---|
-| `handle()` | Stable, unique provider handle (e.g. `google`) |
-| `displayName()` | Human-readable name |
-| `icon()` | SVG markup for the source picker (or `null`) |
-| `capabilities()` | Capability flags - `['pull' => true, 'push' => false]` etc. |
-| `settingsSchema()` | Field schema for the source edit form |
-| `testConnection(Source $source)` | Live credential probe - returns `['ok' => bool, 'message' => string]` |
-| `fetchReviews(Source $source, ?\DateTimeInterface $since)` | Yield `FetchedReview` DTOs - the sync service handles dedup, moderation, and persistence |
-
-Implementations yield `FetchedReview` DTOs through `fetchReviews()` so the sync service can stream-write them without keeping the full result set in memory.
 
 ## Support
 
