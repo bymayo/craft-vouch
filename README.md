@@ -165,12 +165,7 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
   {# Show any error returned after submission #}
   {% set errorMsg = craft.app.session.getFlash('error') %}
   {% if errorMsg %}
-    <p class="error" role="alert">
-      {{ errorMsg }}
-      {% if requiresLogin ?? false %}
-        <a href="{{ loginUrl ?? siteUrl('login') }}">{{ 'Log in'|t }}</a>
-      {% endif %}
-    </p>
+    <p class="error" role="alert">{{ errorMsg }}</p>
   {% endif %}
 
   <label for="rating">Rating *</label>
@@ -185,11 +180,11 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
   {% for err in (review.getErrors('rating') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="headline">Headline *</label>
-  <input id="headline" name="headline" value="{{ review.headline ?? '' }}" required>
+  <input id="headline" name="headline" value="{{ review.headline ?? '' }}" maxlength="{{ vouchSettings.headlineMaxLength }}" required>
   {% for err in (review.getErrors('headline') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="review">Review *</label>
-  <textarea id="review" name="review" required>{{ review.review ?? '' }}</textarea>
+  <textarea id="review" name="review" maxlength="{{ vouchSettings.reviewMaxLength }}" required>{{ review.review ?? '' }}</textarea>
   {% for err in (review.getErrors('review') ?? []) %}<p class="error">{{ err }}</p>{% endfor %}
 
   <label for="reviewerName">Reviewer name *</label>
