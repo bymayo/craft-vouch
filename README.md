@@ -2,25 +2,25 @@
 
 # Vouch for Craft CMS
 
-Pull and manage customer reviews from Google, Trustpilot, Feefo, and Reviews.io directly inside Craft - or collect your own through the CP and front-end forms. Surface ratings on entries and products, gate submissions with built-in spam controls, and roll the data up across the site through Twig, GraphQL, and dashboard widgets.
+Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight into Craft - or collect your own through the CP and a front-end form. Show ratings on entries and products, keep spam at bay, and roll it all up through Twig, GraphQL and dashboard widgets.
 
 <img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/resources/screenshot.png" width="850">
 
 ## Features
 
-- **Multi-provider connectors**: Google (Places API + Business Profile OAuth), Trustpilot, Feefo, Reviews.io, plus a Manual source for CP-authored and front-end-submitted reviews
-- **Renameable**: rebrand the plugin sidebar, widgets, permissions heading - "Reviews", "Testimonials", "VIP Feedback", whatever fits the site
-- **Per-source moderation**: require manual approval, set a minimum rating, configure auto-approve thresholds
-- **Front-end submission form**: anonymous-friendly with CSRF, validation errors, configurable length caps, login-gated email validation, and an attribution-forgery defence
-- **Element-index integration**: Rating column on Entries / Commerce Products, Reviews count column on Users, and a "Reviews" tab on the user edit page (just like Commerce's "Commerce" tab)
-- **Dashboard widgets**: Reviews Pending Approval, Latest Reviews, Top Reviewed Elements
-- **Bulk approve** action on the reviews element index for moderation workflows
-- **Granular permissions**: View / Create / Edit / Delete / Approve / Sync each surfaced separately
-- **Developer APIs**: chainable Twig query, GraphQL types and queries, public events for downstream integrations (Points, notifications, spam scoring)
-- **Sync orchestration**: cron-driven, queue-aware, with a per-source sync button and CLI commands
-- **Find Place ID**: built-in Google Places Text Search helper - paste an API key, type a name, click a result to fill in the Place ID
-- **Encrypted credentials**: API keys and OAuth refresh tokens stored encrypted via Craft's security key
-- **Extension events**: register your own provider connector to plug in any third-party review platform
+- **Multiple providers** - Google, Trustpilot, Feefo, Reviews.io, plus a Manual source for CP and front-end submissions
+- **Renameable** - call it "Reviews", "Testimonials", "VIP Feedback"… whatever fits the site
+- **Per-source moderation** - manual approval, minimum ratings, auto-approve thresholds
+- **Front-end submission form** - CSRF, validation, length caps and attribution-forgery defences baked in
+- **Element-index integration** - Rating columns on Entries, Commerce Products and Users, plus a "Reviews" tab on the user edit page
+- **Dashboard widgets** - Reviews Pending Approval, Latest Reviews, Top Reviewed Elements
+- **Bulk approve** - tidy up the pending queue in one go
+- **Granular permissions** - View / Create / Edit / Delete / Approve / Sync, each on its own switch
+- **Developer APIs** - chainable Twig query, GraphQL types and queries, and events for your own integrations
+- **Sync orchestration** - cron-driven, queue-aware, with per-source sync buttons and CLI commands
+- **Find Place ID** - paste a Google API key, type a name, click a match to fill in the Place ID
+- **Encrypted credentials** - API keys and OAuth refresh tokens encrypted with Craft's security key
+- **Extensible** - register your own connector to plug in any third-party review platform
 
 ## Contents
 
@@ -70,75 +70,75 @@ You can also install the plugin via the Plugin Store in the Craft Admin CP by se
 | Reviews.io | Merchant Reviews API | Store ID + API key |
 | Manual | Authored in the CP or via front-end form | n/a |
 
-All credential fields support `$ENV_VAR` references resolved via `App::parseEnv()`. Keep secrets in `.env` and reference them like `$GOOGLE_PLACES_API_KEY` so production credentials never end up in `project.yaml`.
+All credential fields accept `$ENV_VAR` references via `App::parseEnv()`. Keep your secrets in `.env` and reference them like `$GOOGLE_PLACES_API_KEY` so production credentials don't end up in `project.yaml`.
 
 ## Setting up a source
 
-Each source maps one credential set to one provider. Source records live in their own DB table (not Project Config), so admins can rotate API keys on production without a deploy overwriting them.
+Each source pairs one credential set with one provider. Source records live in their own DB table (not Project Config), so you can rotate API keys on production without a deploy clobbering them.
 
-Add a source via **Vouch → Sources → New source**, pick the provider, fill in the credentials, and Save. A "Test connection" check runs automatically on the edit page so credentials are validated immediately.
+Head to **Vouch → Sources → New source**, choose your provider, fill in the credentials and Save. A "Test connection" check runs automatically on the edit page so you'll know straight away if something's off.
 
 ### Google Reviews
 
 Google sources have a **Mode** dropdown:
 
-- **Places API** - works for any place; capped at 5 reviews per call by Google
-- **Business Profile API** - works only for businesses you (or the OAuth-connecting account) own/manage. Returns full review history with pagination. Requires Google partner approval - see below.
+- **Places API** - works for any place, but Google caps you at 5 reviews per call
+- **Business Profile API** - only for businesses you (or the OAuth-connecting account) own or manage. Full review history with pagination, but needs Google partner approval - more on that below
 
 #### Places API mode
 
 1. Open the [Google Cloud Console](https://console.cloud.google.com) and create (or select) a project.
 2. Enable the **Places API (New)** under **APIs & Services → Library**.
 3. Create an API key under **APIs & Services → Credentials → Create credentials → API key**.
-4. **Strongly recommended:** restrict the key. Under the key's settings, set "Application restrictions" to your server IP(s) and "API restrictions" to Places API (New) only - a leaked key then can't be re-used for billed Maps calls.
-5. In Vouch, leave **Mode** on "Places API", paste the API key, then use the built-in **"Find a Place ID"** search box - type a company name, address, or zip code and click **Search**. Vouch proxies Google's Text Search endpoint server-side and lists matching candidates. Clicking one auto-fills the Place ID field.
+4. **Worth doing:** restrict the key. In its settings, set "Application restrictions" to your server IP(s) and "API restrictions" to Places API (New) only - if the key ever leaks, it can't be re-used for billed Maps calls.
+5. In Vouch, leave **Mode** on "Places API", paste your API key, then use the built-in **"Find a Place ID"** search box. Type a company name, address or postcode and hit **Search** - Vouch proxies Google's Text Search endpoint server-side and shows the matches. Click one and the Place ID fills in for you.
 
-   You can also paste a Place ID manually if you already have one from Google's [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id).
+   Already got a Place ID from Google's [Place ID Finder](https://developers.google.com/maps/documentation/places/web-service/place-id)? Paste it in manually instead.
 
-> Google's Places API caps every request at **the 5 most recent reviews**. There's no way to page past that - it's an upstream constraint. Sync runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. **Set `backfillDays` to `0` for Places-mode sources** (unlimited history) since the upstream cap already keeps the cost bounded.
+> Google's Places API caps every request at **the 5 most recent reviews** - there's no way to page past that, it's an upstream limit. Sync runs idempotently (dedup by `(sourceId, externalId)`), so the same 5 reviews are upserted (not duplicated) on each pull. **Set `backfillDays` to `0` for Places-mode sources** (unlimited history) - the upstream cap already keeps the cost in check.
 
 #### Business Profile API mode
 
-> ⚠ **Google gatekeeps this endpoint.** Around 2023 Google restricted programmatic access to reviews on the Business Profile API. To use this mode in production:
+> ⚠ **Heads-up: Google gatekeeps this endpoint.** Back in 2023 Google clamped down on programmatic access to reviews via the Business Profile API. To use this mode in production:
 >
 > 1. Apply via [Google's Business Profile API form](https://support.google.com/business/contact/api_default).
 > 2. Get an OAuth 2.0 consent screen verified by Google (its own review process if your scope is "sensitive").
-> 3. Wait for approval - typically weeks; first-time applicants are often rejected.
+> 3. Wait for approval - usually weeks, and first-time applicants are often turned down.
 >
-> Without approval the OAuth flow completes but the reviews endpoint returns `403 PERMISSION_DENIED`. Vouch surfaces that error verbatim in the "Test connection" status.
+> Without approval the OAuth flow completes fine, but the reviews endpoint comes back with `403 PERMISSION_DENIED`. Vouch shows that error verbatim in the "Test connection" status so you know exactly what's up.
 
-Once approved:
+Once you're approved:
 
 1. Enable the **My Business Account Management API**, **My Business Business Information API**, and the **Business Profile API** in Google Cloud Console.
-2. Create an **OAuth 2.0 Client ID** of type "Web application". Add `https://<your-site>/admin/actions/vouch/sources/google-oauth-callback` to "Authorized redirect URIs". Note the Client ID and Client Secret.
-3. In Vouch: **Add source → Google Reviews**, switch **Mode** to "Business Profile API", paste the Client ID + Client Secret. Save.
-4. Reload, click **"Connect Google account"**, approve on Google's consent screen. The OAuth callback stores an encrypted refresh token on the source.
-5. Fill in the **Location resource name** (`accounts/{accountId}/locations/{locationId}`). List your accounts/locations via the [API explorer](https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list) or `curl` against `https://mybusinessaccountmanagement.googleapis.com/v1/accounts`. Save again.
-6. Hit **"Test connection"** to confirm.
+2. Create an **OAuth 2.0 Client ID** of type "Web application". Add `https://<your-site>/admin/actions/vouch/sources/google-oauth-callback` to "Authorized redirect URIs", then jot down the Client ID and Client Secret.
+3. In Vouch: **Add source → Google Reviews**, switch **Mode** to "Business Profile API", paste in the Client ID + Client Secret and Save.
+4. Reload, click **"Connect Google account"** and approve on Google's consent screen. The OAuth callback stores an encrypted refresh token on the source.
+5. Fill in the **Location resource name** (`accounts/{accountId}/locations/{locationId}`). You can list your accounts/locations via the [API explorer](https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list) or a quick `curl` against `https://mybusinessaccountmanagement.googleapis.com/v1/accounts`. Save again.
+6. Hit **"Test connection"** to make sure everything's talking.
 
-The refresh token is stored encrypted (same mechanism as every other API credential). Access tokens are minted fresh on each sync - never persisted beyond a single request.
+The refresh token is stored encrypted (same as every other API credential). Access tokens are minted fresh on each sync and never persisted beyond a single request.
 
 ### Trustpilot
 
 1. Sign in to [Trustpilot Business](https://business.trustpilot.com).
-2. Generate an API key under your account's API / Integrations settings. The public tier is enough for pulling reviews of your own business unit.
-3. Find your **Business Unit ID** via a one-off curl with your new key:
+2. Generate an API key under your account's API / Integrations settings. The public tier is plenty for pulling reviews of your own business unit.
+3. Find your **Business Unit ID** with a quick curl using your new key:
    ```bash
    curl "https://api.trustpilot.com/v1/business-units/find?name=yourdomain.com" \
      -H "apikey: YOUR_API_KEY"
    ```
-   The `id` field in the response is the Business Unit ID.
+   The `id` field in the response is your Business Unit ID.
 4. Paste both into the Trustpilot source edit page.
 
-Trustpilot returns reviews newest-first; Vouch paginates with cursor early-exit so subsequent syncs only walk new pages.
+Trustpilot returns reviews newest-first, and Vouch paginates with cursor early-exit so later syncs only walk the new pages.
 
 ### Feefo
 
-1. Your **Merchant identifier** is the slug visible in your Feefo dashboard URL.
-2. An **API key** is optional. Public review data flows without one; private fields (e.g. customer email) require a paid plan and a bearer key.
+1. Your **Merchant identifier** is the slug in your Feefo dashboard URL.
+2. An **API key** is optional. Public review data flows without one; private fields (e.g. customer email) need a paid plan and a bearer key.
 3. Paste the merchant identifier and (optionally) the API key into the Feefo source edit page.
 
-If the API key is omitted, reviewer emails come through as `null` and user-matching won't fire.
+Without an API key, reviewer emails come through as `null` and user-matching won't fire.
 
 ### Reviews.io
 
@@ -150,12 +150,12 @@ Reviewer email is passed through when present, so user-matching works out of the
 
 ### Manual
 
-No external credentials. Add a Manual source to:
+No external credentials needed. Add a Manual source to:
 
 - Author reviews directly in the CP via the **+ New review** button.
 - Collect reviews through a front-end form (see [Front-end review submissions](#front-end-review-submissions) below).
 
-Manual sources can still have `Require manual approval` toggled on - moderation respects the same `autoApproveThreshold` setting as API-backed sources.
+Manual sources can still have `Require manual approval` toggled on - moderation respects the same `autoApproveThreshold` setting as the API-backed sources.
 
 ## Sync
 
@@ -174,11 +174,11 @@ Sync is driven by cron. There's no per-source schedule field in the CP - the cro
 0 4 * * *  php craft vouch/sync/source trustpilot-main
 ```
 
-The per-row **Sync** button on the Sources index runs synchronously for ad-hoc pulls.
+The per-row **Sync** button on the Sources index runs synchronously - handy for one-off pulls.
 
 ## Front-end review submissions
 
-For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anonymous-allowed) - it hard-rejects non-Manual sources so customer submissions can't bypass Trustpilot/Feefo moderation.
+For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anonymous-allowed) and it hard-rejects non-Manual sources, so customer submissions can't sneak past Trustpilot/Feefo moderation.
 
 ```twig
 {# `review` and `requiresLogin` are populated by the controller when validation
@@ -242,9 +242,9 @@ For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anon
 
 ## Attribution & spam controls
 
-`reviewerEmail` is captured for moderation / contact, but Vouch will **only attribute** a review to a Craft user (`reviewerUserId`) when the submitter is logged in AND the email they submit matches the email on their own account. This blocks the forge-by-email attribution attack.
+`reviewerEmail` is captured for moderation / contact, but Vouch will **only attribute** a review to a Craft user (`reviewerUserId`) when the submitter is logged in AND the email they submit matches the email on their own account. That shuts down the forge-by-email attribution trick.
 
-Even with attribution locked down, an anonymous attacker could still *plant* a review under a real user's email. To stop that, the `requireLoginForKnownEmails` setting (on by default) makes the controller reject any submission whose email belongs to an existing Craft user unless the submitter is logged in as them. The response is JSON when `Accept: application/json` is set:
+Even with attribution locked down, an anonymous attacker could still *plant* a review under a real user's email. To stop that, the `requireLoginForKnownEmails` setting (on by default) rejects any submission whose email belongs to an existing Craft user unless the submitter is logged in as them. The response is JSON when `Accept: application/json` is set:
 
 ```json
 {
@@ -257,29 +257,29 @@ Even with attribution locked down, an anonymous attacker could still *plant* a r
 
 For HTML submits, the controller flashes an error message and sets a `requiresLogin` route param the template can read.
 
-If you want every front-end review verified before it goes live, layer on the usual defences:
+If you want every front-end review checked before it goes live, layer on the usual defences:
 
 - Turn on **"Require manual approval"** on the source so reviews land Pending until an admin approves.
-- Restrict the submit form to logged-in users (`{% requireLogin %}` at the top of the template, or check `currentUser` before rendering).
-- For anonymous-allowed forms, add the standard public-form defences: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email format check.
-- Use the `EVENT_AFTER_SYNC_REVIEW` event to run your own spam scoring (Akismet, OOPSpam, etc.) and flip `$review->approved = false` for anything suspicious.
+- Lock the submit form down to logged-in users (`{% requireLogin %}` at the top of the template, or check `currentUser` before rendering).
+- For anonymous-allowed forms, bring out the usual public-form toolkit: a honeypot, hCaptcha / reCAPTCHA, rate limiting ([`putyourlightson/craft-rate-limit`](https://github.com/putyourlightson/craft-rate-limit) or a CDN rule), and a server-side email format check.
+- Use the `EVENT_AFTER_SYNC_REVIEW` event to run your own spam scoring (Akismet, OOPSpam, that sort of thing) and flip `$review->approved = false` for anything dodgy.
 
-The sync path (Google / Trustpilot / Feefo / Reviews.io) still auto-matches emails to Craft users - those emails come from the provider, not anonymous user input, so the same trust concern doesn't apply.
+The sync path (Google / Trustpilot / Feefo / Reviews.io) still auto-matches emails to Craft users - those emails come from the provider rather than anonymous user input, so the same trust concern doesn't apply.
 
 ## Element-index integration
 
-Entries and Commerce Products gain an opt-in **"Rating"** column showing the average across all approved reviews related to that element. Enable it via the column settings on the element index. The entry/product edit page also gains a sidebar summary with the overall average + per-source breakdown.
+Entries and Commerce Products get an opt-in **"Rating"** column showing the average across all approved reviews tied to that element. Switch it on via the column settings on the element index. The entry/product edit page also picks up a sidebar summary with the overall average and a per-source breakdown.
 
-The "Rating" column links a deep-filter back to the reviews index pre-filtered by that element.
+The "Rating" column deep-links back to the reviews index pre-filtered by that element.
 
 ## Users integration
 
 - **"Reviews" column** on the Users element index showing how many approved reviews each user has authored (matched via `reviewerUserId`).
-- **"Reviews" screen** on the user edit page - the same place Commerce adds its "Commerce" tab. Embeds the reviews element index pre-filtered to that user. The sidebar label uses the configured `pluginName`. Visible to users with `vouch-viewReviews`.
+- **"Reviews" screen** on the user edit page - same spot Commerce adds its "Commerce" tab. Embeds the reviews element index pre-filtered to that user, with the sidebar label using your configured `pluginName`. Visible to users with `vouch-viewReviews`.
 
 ## Dashboard widgets
 
-Add via the Craft dashboard → **+ New widget**. All three respect your `pluginName` rename:
+Add via the Craft dashboard → **+ New widget**. All three pick up your `pluginName` rename:
 
 | Widget | Shows | Settings |
 |---|---|---|
@@ -291,11 +291,11 @@ All three require the `vouch-viewWidgets` permission.
 
 ## Reviews index actions
 
-The reviews element index ships with a built-in **Bulk Approve** action - select any pending reviews and approve them in one go. Skips already-approved rows and fires `EVENT_AFTER_APPROVE_REVIEW` exactly the same way single-row approvals do, so downstream listeners (Points, notifications, etc.) work consistently across paths. Visible to users with `vouch-approveReviews`.
+The reviews element index comes with a built-in **Bulk Approve** action - tick a few pending reviews and approve them in one go. It skips anything already approved and fires `EVENT_AFTER_APPROVE_REVIEW` exactly like single-row approvals do, so downstream listeners (Points, notifications, etc.) behave the same across both paths. Visible to users with `vouch-approveReviews`.
 
 ## Settings
 
-Settings can be edited at **Settings → Plugins → Vouch** in the CP, and overridden per environment by `config/vouch.php`.
+Settings live at **Settings → Plugins → Vouch** in the CP, and can be overridden per environment via `config/vouch.php`.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -310,7 +310,7 @@ Settings can be edited at **Settings → Plugins → Vouch** in the CP, and over
 
 ## Permissions
 
-Granular permission set under the **Vouch** heading on each user group's permissions page (heading respects `pluginName`):
+A granular set of permissions sits under the **Vouch** heading on each user group's permissions page (the heading respects `pluginName`):
 
 ```
 Vouch
@@ -321,18 +321,18 @@ Vouch
   ☐ Manage settings
 ```
 
-A few role recipes:
+A few role recipes to get you going:
 
 - **Pure moderator** - `View reviews` + `Approve pending reviews`. Can see and approve, can't edit content or delete.
 - **Content author** - `View reviews` + `Create reviews` + `Edit reviews`. Can author and edit, can't approve their own work.
 - **Sync operator** - `View sources` + `Trigger sync`. Can re-run failed pulls without being able to rotate API keys or delete sources.
-- **Source manager** - `View sources` + `Create sources` + `Edit sources` (no delete). Sets up new providers + rotates credentials, but can't accidentally remove a source.
+- **Source manager** - `View sources` + `Create sources` + `Edit sources` (no delete). Sets up new providers and rotates credentials, but can't accidentally remove a source.
 
-Each permission is independent. Front-end submission endpoints don't use these permissions - they check the source's manual flag + login state per the [Attribution & spam controls](#attribution--spam-controls) above.
+Each permission is independent. Front-end submission endpoints don't use these - they check the source's manual flag and login state per [Attribution & spam controls](#attribution--spam-controls) above.
 
 ## Twig
 
-`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only** - pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
+`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only**, so pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
 
 ```twig
 {# Latest 5 approved reviews from any source #}
@@ -403,7 +403,7 @@ Twig API surface:
 }
 ```
 
-Public GraphQL queries default to `approved: true` so pending-moderation reviews never leak. Admins can override with `approved: false` when needed.
+Public GraphQL queries default to `approved: true` so pending-moderation reviews never leak. Admins can override with `approved: false` when they need to.
 
 | Query | Args | Returns |
 |---|---|---|
@@ -437,7 +437,7 @@ Event::on(
 
 ## Adding your own provider
 
-Implement `bymayo\vouch\connectors\ConnectorInterface` (or extend `BaseConnector` for sensible defaults) and register it via the `EVENT_REGISTER_PROVIDERS` event:
+Got a review platform Vouch doesn't cover yet? Implement `bymayo\vouch\connectors\ConnectorInterface` (or extend `BaseConnector` for sensible defaults) and register it via the `EVENT_REGISTER_PROVIDERS` event:
 
 ```php
 use bymayo\vouch\events\RegisterProvidersEvent;
@@ -452,7 +452,7 @@ Event::on(
 );
 ```
 
-Drop a brand SVG into your plugin and return its markup from `icon()` (or copy `BaseConnector::loadIcon()`'s pattern with your own resource path).
+Drop a brand SVG into your plugin and return its markup from `icon()` (or pinch `BaseConnector::loadIcon()`'s pattern with your own resource path).
 
 The connector contract:
 
@@ -466,7 +466,7 @@ The connector contract:
 | `testConnection(Source $source)` | Live credential probe - returns `['ok' => bool, 'message' => string]` |
 | `fetchReviews(Source $source, ?\DateTimeInterface $since)` | Yield `FetchedReview` DTOs - the sync service handles dedup, moderation, and persistence |
 
-Implementations yield `FetchedReview` DTOs through `fetchReviews()` so the sync service can stream-write them without holding the full result set in memory.
+Implementations yield `FetchedReview` DTOs through `fetchReviews()` so the sync service can stream-write them without keeping the full result set in memory.
 
 ## Support
 
