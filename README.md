@@ -31,8 +31,8 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more o
   - [Feefo](#feefo)
   - [Reviews.io](#reviewsio)
   - [Manual](#manual)
-- [Sync](#sync)
 - [Front-end review submissions](#front-end-review-submissions)
+- [Sync](#sync)
 - [Attribution & spam controls](#attribution--spam-controls)
 - [Element-index integration](#element-index-integration)
 - [Users integration](#users-integration)
@@ -146,25 +146,6 @@ No external credentials needed. Add a Manual source to:
 
 Manual sources can still have `Require manual approval` toggled on - moderation respects the same `autoApproveThreshold` setting as the API-backed sources.
 
-## Sync
-
-Sync is driven by cron. There's no per-source schedule field in the CP - the cron entry *is* the schedule.
-
-```bash
-# Recommended: cron drives cadence, queue runner handles execution
-0 * * * *  php craft vouch/sync/all       # enqueue every enabled source hourly
-* * * * *  php craft queue/run            # process the queue continuously
-
-# No queue worker, runs inline (slow sources block the cron):
-0 4 * * *  php craft vouch/sync/all --sync
-
-# Per-source cadence - multiple cron entries instead of in-app schedule:
-0 * * * *  php craft vouch/sync/source google-uk
-0 4 * * *  php craft vouch/sync/source trustpilot-main
-```
-
-The per-row **Sync** button on the Sources index runs synchronously - handy for one-off pulls.
-
 ## Front-end review submissions
 
 For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anonymous-allowed) and it hard-rejects non-Manual sources, so customer submissions can't sneak past Trustpilot/Feefo moderation.
@@ -228,6 +209,21 @@ For Manual sources only. The controller endpoint is `vouch/reviews/submit` (anon
 
 **Required:** `sourceHandle`, `rating`, `headline`, `review`, `reviewerName`, `reviewerEmail`.
 **Optional:** `relatedElementId`.
+
+## Sync
+
+Sync runs inline - just point cron at it. There's no per-source schedule in the CP; the cron entry *is* the schedule.
+
+```bash
+# Every enabled source, hourly
+0 * * * *  php craft vouch/sync/all
+
+# Different cadence per source - the last bit is the source's handle
+0 * * * *  php craft vouch/sync/source google-uk
+0 4 * * *  php craft vouch/sync/source trustpilot-main
+```
+
+The argument on `vouch/sync/source` is the **handle** you set when creating the source (visible in the Sources index). You can also hit the **Sync** button on the Sources index, the source edit page, or the dashboard widget for an ad-hoc pull.
 
 ## Attribution & spam controls
 

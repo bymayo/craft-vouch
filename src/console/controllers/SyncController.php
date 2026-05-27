@@ -11,15 +11,11 @@ use yii\helpers\Console;
 /**
  * `craft vouch/sync/*` console commands.
  *
- * Cadence is set by your cron entry, not by per-source config - there's no
- * separate "schedule" on a Source. Examples:
+ * Runs synchronously. Cadence is set by your cron entry - there's no
+ * per-source schedule. Examples:
  *
- *  - Hourly, queue-driven (recommended):
+ *  - Hourly, every source:
  *      `0 * * * *  php craft vouch/sync/all`
- *      `* * * * *  php craft queue/run`
- *
- *  - Daily, no queue worker (simpler, but a slow source blocks the run):
- *      `0 4 * * *  php craft vouch/sync/all --sync`
  *
  *  - Different cadences per source:
  *      `0 * * * *  php craft vouch/sync/source google-uk`
@@ -28,23 +24,7 @@ use yii\helpers\Console;
 class SyncController extends Controller
 {
     /**
-     * Force synchronous execution instead of queueing. Useful for installs
-     * without a running queue worker, and for one-off debugging.
-     */
-    public bool $sync = false;
-
-    public function options($actionID): array
-    {
-        $options = parent::options($actionID);
-        if (in_array($actionID, ['all', 'source'], true)) {
-            $options[] = 'sync';
-        }
-        return $options;
-    }
-
-    /**
-     * Sync every enabled source. Queues by default; pass `--sync` to run
-     * inline. Cron-friendly.
+     * Sync every enabled source. Cron-friendly.
      */
     public function actionAll(): int
     {
@@ -60,24 +40,14 @@ class SyncController extends Controller
 
         $ok = true;
         foreach ($sources as $source) {
-            if ($this->sync) {
-                $ok = $this->runOne($source) && $ok;
-            } else {
-                Vouch::getInstance()->sync->queue($source);
-                $this->stdout("Queued: {$source->name}\n");
-            }
-        }
-
-        if (!$this->sync) {
-            $this->stdout(sprintf("Queued %d source(s).\n", count($sources)), Console::FG_GREEN);
+            $ok = $this->runOne($source) && $ok;
         }
 
         return $ok ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
     /**
-     * Sync a single source by numeric id or handle. With `--sync` runs
-     * inline; otherwise pushes onto the queue.
+     * Sync a single source by numeric id or handle.
      */
     public function actionSource(string $idOrHandle): int
     {
@@ -91,18 +61,12 @@ class SyncController extends Controller
             return ExitCode::DATAERR;
         }
 
-        if ($this->sync) {
-            return $this->runOne($source) ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
-        }
-
-        $jobId = $vouch->sync->queue($source);
-        if ($jobId === null) {
+        if (!$source->enabled) {
             $this->stderr("Source is disabled.\n", Console::FG_RED);
             return ExitCode::USAGE;
         }
 
-        $this->stdout("Queued job {$jobId}: {$source->name}\n", Console::FG_GREEN);
-        return ExitCode::OK;
+        return $this->runOne($source) ? ExitCode::OK : ExitCode::UNSPECIFIED_ERROR;
     }
 
     private function runOne(Source $source): bool

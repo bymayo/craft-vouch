@@ -3,7 +3,6 @@
 namespace bymayo\vouch\services;
 
 use bymayo\vouch\events\SourceSyncEvent;
-use bymayo\vouch\jobs\SyncSourceJob;
 use bymayo\vouch\models\Source;
 use bymayo\vouch\records\SourceRecord;
 use bymayo\vouch\Vouch;
@@ -12,12 +11,9 @@ use craft\helpers\Db;
 use yii\base\Component;
 
 /**
- * Drive a single sync run against one source.
- *
- * Phase 2 is intentionally synchronous - useful for "Sync now" buttons and
- * for `vouch/sync/source` console runs against small Google data sets. Phase
- * 4 swaps this for a queue-backed `SyncSourceJob` that calls into the same
- * `run()` method, so all of the upsert/cursor/bookkeeping logic stays here.
+ * Drive a single sync run against one source. Runs synchronously - the CP
+ * "Sync now" button, the dashboard widget, and the `craft vouch/sync/*`
+ * console commands all call straight into `run()`.
  */
 class Sync extends Component
 {
@@ -29,42 +25,6 @@ class Sync extends Component
 
     /** Fired after a source sync finishes, success or failure. */
     public const EVENT_AFTER_SOURCE_SYNC = 'afterSourceSync';
-
-    /**
-     * Push a `SyncSourceJob` onto Craft's queue. Returns the job id, or null
-     * if the source was rejected (disabled / missing).
-     */
-    public function queue(Source $source): ?string
-    {
-        if (!$source->enabled) {
-            return null;
-        }
-
-        return Craft::$app->getQueue()->push(new SyncSourceJob([
-            'sourceId' => $source->id,
-        ]));
-    }
-
-    /**
-     * Queue jobs for every enabled source. Intended to be called from cron
-     * via `craft vouch/sync/all` - the cron's own cadence is the schedule;
-     * there's no per-source schedule on top of it.
-     *
-     * @return int Number of jobs queued.
-     */
-    public function queueAll(): int
-    {
-        $count = 0;
-        foreach (Vouch::getInstance()->sources->getAllSources() as $source) {
-            if (!$source->enabled) {
-                continue;
-            }
-            if ($this->queue($source) !== null) {
-                $count++;
-            }
-        }
-        return $count;
-    }
 
     /**
      * Run a full sync for `$source`. Returns a result summary the caller can
