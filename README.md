@@ -32,16 +32,15 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io (with more o
   - [Reviews.io](#reviewsio)
   - [Manual](#manual)
 - [Front-end review submissions](#front-end-review-submissions)
+- [Twig](#twig)
 - [Sync](#sync)
 - [Attribution & spam controls](#attribution--spam-controls)
 - [Element integration](#element-integration)
 - [Dashboard widgets](#dashboard-widgets)
-- [Reviews index actions](#reviews-index-actions)
 - [Settings](#settings)
-- [Permissions](#permissions)
-- [Twig](#twig)
 - [GraphQL](#graphql)
 - [Events](#events)
+- [Nice to know](#nice-to-know)
 - [Support](#support)
 
 ## Install
@@ -221,6 +220,63 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
 | `relatedElementId` | No | Tie the review to a specific entry, product, user, etc. |
 | `vouchHoneypot` | No | Hidden honeypot - leave empty. Any value silently discards the submission |
 
+## Twig
+
+`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only**, so pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
+
+```twig
+{# Latest 5 approved reviews from any source #}
+{% for review in craft.vouch.reviews().limit(5).all() %}
+  <article>
+    <h3>{{ review.headline ?: review.reviewerName }}</h3>
+    <p>{{ review.rating }} ★ - {{ review.reviewedAt|date('M j, Y') }}</p>
+    <blockquote>{{ review.review }}</blockquote>
+  </article>
+{% endfor %}
+
+{# Filter by source + rating threshold #}
+{% set google = craft.vouch.source('google-uk') %}
+{% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
+
+{# Site-wide average #}
+<p>Average rating: {{ craft.vouch.averageRating()|number_format(1) }} ★</p>
+
+{# Average for a specific element (entry / Commerce product) #}
+{% set rating = craft.vouch.ratingForElement(entry.id) %}
+{% if rating %}
+  <p>{{ rating|number_format(1) }} ★ across all sources</p>
+{% endif %}
+
+{# Per-source breakdown for an element #}
+{% for row in craft.vouch.ratingBreakdownForElement(entry.id) %}
+  <li>{{ row.sourceName }}: {{ row.average|number_format(1) }} ★ ({{ row.count }})</li>
+{% endfor %}
+```
+
+Convenience getters on the `Review` element:
+
+| Call | Returns |
+|---|---|
+| `review.sourceName` | The source's display name (e.g. "Google UK") |
+| `review.sourceHandle` | The source's machine handle |
+| `review.providerHandle` | The connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`) |
+| `review.getReviewerUser()` | The Craft `User` element when the reviewer's email matched an account, otherwise `null` |
+
+Twig API surface:
+
+| Call | Returns |
+|---|---|
+| `craft.vouch.reviews()` | Chainable `ReviewQuery` (defaults to `approved(true)`) |
+| `craft.vouch.sources()` | All `Source` models |
+| `craft.vouch.source(handle)` | A single `Source` by handle |
+| `craft.vouch.sourceById(id)` | A single `Source` by id |
+| `craft.vouch.providers()` | All registered connectors |
+| `craft.vouch.averageRating(sourceId?)` | Site-wide or per-source average rating |
+| `craft.vouch.ratingForElement(elementId)` | Average rating across approved reviews for one element |
+| `craft.vouch.ratingBreakdownForElement(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
+| `craft.vouch.pluginName()` | The configured plugin name |
+| `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.headlineMaxLength`) |
+
 ## Sync
 
 Set up a cron job to pull in new reviews on a schedule. You decide how often it runs.
@@ -279,105 +335,22 @@ Add via the Craft dashboard → **+ New widget**.
 | **Top Reviewed Elements** | Elements ranked by review count or average rating. | `elementType`, `sectionId`, `sort`, `limit` |
 | **Sources** | Each source with its last-synced timestamp and a one-click Sync button. Manual sources are excluded. | `sourceId` |
 
-## Reviews index actions
-
-The reviews element index comes with a built-in **Bulk Approve** action - tick a few pending reviews and approve them in one go. It skips anything already approved and fires `EVENT_AFTER_APPROVE_REVIEW` exactly like single-row approvals do, so downstream listeners (Points, notifications, etc.) behave the same across both paths. Visible to users with `vouch-approveReviews`.
-
 ## Settings
 
 Settings live at **Settings → Plugins → Vouch** in the CP, and can be overridden per environment via `config/vouch.php`.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `pluginName` | `Vouch` | Display name in the CP sidebar, widget picker, permissions heading. |
-| `matchAuthorsToUsers` | `true` | Match reviewer emails to existing Craft users on sync. |
-| `emailRetentionDays` | `365` | Days to keep reviewer emails before purging. `0` = never. |
-| `backfillDays` | `90` | Days of history to pull on a source's first sync. `0` = all. |
-| `autoApproveThreshold` | `5.0` | When a source requires manual approval, reviews at or above this rating skip the queue. |
-| `requireLoginForKnownEmails` | `true` | Reject front-end submissions whose email matches an existing Craft user, unless they're logged in as that user. |
-| `headlineMaxLength` | `120` | Max characters allowed in a manual review's headline. `0` disables. |
-| `reviewMaxLength` | `2000` | Max characters allowed in a manual review body. `0` disables. |
-| `submissionRateLimit` | `5` | Max front-end submissions allowed per IP within the rate window. `0` disables. |
-| `submissionRateWindow` | `60` | Rolling window (in seconds) for the per-IP submission rate limit. |
-
-## Permissions
-
-A granular set of permissions sits under the **Vouch** heading on each user group's permissions page (the heading respects `pluginName`):
-
-```
-Vouch
-  ▸ View reviews          ↳ Create / Edit / Delete reviews
-  ☐ Approve pending reviews
-  ▸ View sources          ↳ Create / Edit / Delete sources, Trigger sync
-  ☐ Use dashboard widgets
-  ☐ Manage settings
-```
-
-A few role recipes to get you going:
-
-- **Pure moderator** - `View reviews` + `Approve pending reviews`. Can see and approve, can't edit content or delete.
-- **Content author** - `View reviews` + `Create reviews` + `Edit reviews`. Can author and edit, can't approve their own work.
-- **Sync operator** - `View sources` + `Trigger sync`. Can re-run failed pulls without being able to rotate API keys or delete sources.
-- **Source manager** - `View sources` + `Create sources` + `Edit sources` (no delete). Sets up new providers and rotates credentials, but can't accidentally remove a source.
-
-Each permission is independent. Front-end submission endpoints don't use these - they check the source's manual flag and login state per [Attribution & spam controls](#attribution--spam-controls) above.
-
-## Twig
-
-`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only**, so pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
-
-```twig
-{# Latest 5 approved reviews from any source #}
-{% for review in craft.vouch.reviews().limit(5).all() %}
-  <article>
-    <h3>{{ review.headline ?: review.reviewerName }}</h3>
-    <p>{{ review.rating }} ★ - {{ review.reviewedAt|date('M j, Y') }}</p>
-    <blockquote>{{ review.review }}</blockquote>
-  </article>
-{% endfor %}
-
-{# Filter by source + rating threshold #}
-{% set google = craft.vouch.source('google-uk') %}
-{% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
-
-{# Site-wide average #}
-<p>Average rating: {{ craft.vouch.averageRating()|number_format(1) }} ★</p>
-
-{# Average for a specific element (entry / Commerce product) #}
-{% set rating = craft.vouch.ratingForElement(entry.id) %}
-{% if rating %}
-  <p>{{ rating|number_format(1) }} ★ across all sources</p>
-{% endif %}
-
-{# Per-source breakdown for an element #}
-{% for row in craft.vouch.ratingBreakdownForElement(entry.id) %}
-  <li>{{ row.sourceName }}: {{ row.average|number_format(1) }} ★ ({{ row.count }})</li>
-{% endfor %}
-```
-
-Convenience getters on the `Review` element:
-
-| Call | Returns |
-|---|---|
-| `review.sourceName` | The source's display name (e.g. "Google UK") |
-| `review.sourceHandle` | The source's machine handle |
-| `review.providerHandle` | The connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`) |
-| `review.getReviewerUser()` | The Craft `User` element when the reviewer's email matched an account, otherwise `null` |
-
-Twig API surface:
-
-| Call | Returns |
-|---|---|
-| `craft.vouch.reviews()` | Chainable `ReviewQuery` (defaults to `approved(true)`) |
-| `craft.vouch.sources()` | All `Source` models |
-| `craft.vouch.source(handle)` | A single `Source` by handle |
-| `craft.vouch.sourceById(id)` | A single `Source` by id |
-| `craft.vouch.providers()` | All registered connectors |
-| `craft.vouch.averageRating(sourceId?)` | Site-wide or per-source average rating |
-| `craft.vouch.ratingForElement(elementId)` | Average rating across approved reviews for one element |
-| `craft.vouch.ratingBreakdownForElement(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
-| `craft.vouch.pluginName()` | The configured plugin name |
-| `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.headlineMaxLength`) |
+| `pluginName` | `Vouch` | Plugin name shown in the CP. |
+| `matchAuthorsToUsers` | `true` | Link reviewer emails to Craft users. |
+| `emailRetentionDays` | `365` | Days to keep reviewer emails. `0` = forever. |
+| `backfillDays` | `90` | History to pull on first sync. `0` = everything. |
+| `autoApproveThreshold` | `5.0` | Auto-approve reviews at or above this rating. |
+| `requireLoginForKnownEmails` | `true` | Block submissions using an email already tied to a Craft user. |
+| `headlineMaxLength` | `120` | Max headline length. `0` = no limit. |
+| `reviewMaxLength` | `2000` | Max review body length. `0` = no limit. |
+| `submissionRateLimit` | `5` | Max submissions per IP per window. `0` = no limit. |
+| `submissionRateWindow` | `60` | Rate-limit window in seconds. |
 
 ## GraphQL
 
@@ -427,6 +400,20 @@ Event::on(
 | `Reviews::EVENT_AFTER_APPROVE_REVIEW` | Exactly once per review when it becomes approved |
 | `Sync::EVENT_BEFORE_SOURCE_SYNC` | Cancellable - set `$event->cancelled = true` to skip the run |
 | `Sync::EVENT_AFTER_SOURCE_SYNC` | Carries the populated `SyncResult` |
+
+## Nice to know
+
+### Permissions
+
+Vouch adds its own permissions group to each user group's permissions page - View / Create / Edit / Delete for reviews and sources, plus Approve, Trigger sync, Use widgets and Manage settings.
+
+### Bulk approving reviews
+
+On the Reviews element index, select any pending reviews and use the **Bulk Approve** action to approve them all in one go.
+
+### Renaming the plugin
+
+Vouch picks up whatever you set as `pluginName` in Settings - so you can call it whatever suits your site, e.g. Reviews, Testimonials, Feedback.
 
 ## Support
 
