@@ -222,7 +222,7 @@ On a failed submission, Vouch repopulates a `review` variable with the user's in
 
 ## Twig
 
-`craft.vouch.reviews()` returns a chainable query that **defaults to approved-only**, so pending-moderation reviews never leak onto the front-end. Pass `.approved(false)` for pending only, or `.approved(null)` for both.
+Because Vouch pulls reviews from every provider into a single store, you can mix and slice them however you like from one Twig API. Here are some real-life examples you can drop straight into a template.
 
 ### Overall rating across all sources
 
@@ -316,7 +316,7 @@ Handy getters on each `Review` element:
 
 | Call | Returns |
 |---|---|
-| `craft.vouch.reviews()` | Chainable `ReviewQuery` (defaults to `approved(true)`) |
+| `craft.vouch.reviews()` | Review query. Chainable filters: `.sourceId(id)`, `.externalId(str)`, `.rating(value)`, `.approved(bool\|null)`, `.reviewerUserId(id)`, `.relatedElementId(id)`. Defaults to approved-only - pass `.approved(false)` for pending only or `.approved(null)` for both. |
 | `craft.vouch.sources()` | All `Source` models |
 | `craft.vouch.source(handle)` | A single `Source` by handle |
 | `craft.vouch.sourceById(id)` | A single `Source` by id |
