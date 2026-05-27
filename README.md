@@ -264,22 +264,20 @@ Vouch wires ratings into Craft's own element indexes and edit pages so reviews s
 
 | Element | What you get | How to enable |
 |---|---|---|
-| **Entries** | A **Rating** column on the index, plus a sidebar block on the entry edit page showing the average and a per-source breakdown. The column links through to the filtered reviews index. | Element index → cog icon → tick **Rating** |
-| **Commerce Products** | Same as Entries - Rating column + sidebar block on the product edit page. | Element index → cog icon → tick **Rating** |
-| **Users** | A **Reviews** column on the users index (count of approved reviews authored), plus a **Reviews** screen on the user edit page (same spot Commerce adds its Commerce tab). | Users index → cog icon → tick **Reviews**. The edit-page screen appears for anyone with `vouch-viewReviews`. |
+| **Entries** | Rating column on the index + sidebar block on the edit page with the average and per-source breakdown. | Index → cog → tick **Rating** |
+| **Commerce Products** | Same as Entries. | Index → cog → tick **Rating** |
+| **Users** | Reviews count column on the index + a **Reviews** tab on the edit page listing reviews they've authored. | Index → cog → tick **Reviews** |
 
 ## Dashboard widgets
 
-Add via the Craft dashboard → **+ New widget**. All of them pick up your `pluginName` rename:
+Add via the Craft dashboard → **+ New widget**.
 
 | Widget | Shows | Settings |
 |---|---|---|
-| **Reviews Pending Approval** | Reviews awaiting moderation with headline, rating, reviewer + date. Footer links to the pending source on the reviews index. | `limit` |
-| **Latest Reviews** | The most recent approved reviews. Reviewer name links to the matched Craft user when available. | `limit`, `sourceId` (filter to one source, or any) |
-| **Top Reviewed Elements** | Ranks elements by review count or average rating. Column header reflects the chosen element type. | `elementType`, `sectionId` (Entries only), `sort`, `limit` |
-| **Sources** | Each pull-based source (Manual sources are excluded) with its last-synced timestamp and a one-click Sync button. The Sync button needs `vouch-syncSources`. | `sourceId` (filter to one source, or all) |
-
-All widgets require the `vouch-viewWidgets` permission.
+| **Reviews Pending Approval** | Reviews waiting to be approved. | `limit` |
+| **Latest Reviews** | The most recent approved reviews. | `limit`, `sourceId` |
+| **Top Reviewed Elements** | Elements ranked by review count or average rating. | `elementType`, `sectionId`, `sort`, `limit` |
+| **Sources** | Each source with its last-synced timestamp and a one-click Sync button. Manual sources are excluded. | `sourceId` |
 
 ## Reviews index actions
 
