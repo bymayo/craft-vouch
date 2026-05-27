@@ -19,6 +19,7 @@ Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight int
 - **Granular permissions** - View / Create / Edit / Delete / Approve / Sync, each on its own switch
 - **Developer APIs** - chainable Twig query, GraphQL types and queries, and events for your own integrations
 - **Cron syncing** - schedule pulls per source or all at once, with sync buttons throughout the CP for ad-hoc runs
+- **Points integration** - award loyalty points or site credit when a review is approved (requires the [Points](https://plugins.craftcms.com/points?craft5) plugin)
 
 > [!TIP]
 > 📦 **Part of a suite.** A wider set of plugins built for Commerce stores - pair them up for a more complete setup:
@@ -466,6 +467,18 @@ On the Reviews element index, select any pending reviews and use the **Bulk Appr
 ### Renaming the plugin
 
 Vouch picks up whatever you set as `pluginName` in Settings - so you can call it whatever suits your site, e.g. Reviews, Testimonials, Feedback.
+
+### Points integration
+
+If you've got [Points](https://plugins.craftcms.com/points?craft5) installed, Vouch automatically registers a **Review approved** trigger so you can award points (or site credit) whenever a customer's review goes live. Build a rule in Points → Rules pointed at that trigger and optionally narrow it down with the bundled conditions:
+
+| Condition | What it does |
+|---|---|
+| **Is from source** | Only fire for reviews from specific sources - e.g. more points for Google than Trustpilot. |
+| **Rating is at least** | Only fire when the review's rating meets a minimum (e.g. 4★+ only). |
+| **Review length is at least** | Only fire when the body meets a minimum character count - encourages thoughtful reviews over one-liners. |
+
+Points are only awarded for reviews tied to a Craft user (matched by email).
 
 ## Support
 

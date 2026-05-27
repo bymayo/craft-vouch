@@ -470,6 +470,17 @@ class Vouch extends Plugin
 
     private function attachEventHandlers(): void
     {
+        // Points integration. Use the sugar API which is load-order safe:
+        // Points fires its EVENT_REGISTER_TRIGGERS during its own init(),
+        // so the event-based approach only works when Vouch happens to load
+        // first. register() handles both cases (buffers if Triggers hasn't
+        // initialised yet, adds straight away if it has).
+        if (Craft::$app->getPlugins()->isPluginEnabled('points')) {
+            \bymayo\points\Points::getInstance()->triggers->register(
+                new \bymayo\vouch\triggers\ReviewApprovedTrigger()
+            );
+        }
+
         Event::on(
             Elements::class,
             Elements::EVENT_REGISTER_ELEMENT_TYPES,

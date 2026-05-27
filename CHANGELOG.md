@@ -1,5 +1,10 @@
 # Vouch Changelog
 
+## 5.0.2 - 2026-05-27
+
+### Added
+- **Points plugin integration**. Vouch registers a "Review approved" trigger with [Points](https://plugins.craftcms.com/points?craft5) when installed, along with three bundled conditions for narrowing rules: **Is from source**, **Rating is at least**, and **Review length is at least**. Points are only awarded for reviews tied to a Craft user.
+
 ## 5.0.1 - 2026-05-27
 
 ### Added
