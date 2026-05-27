@@ -239,7 +239,7 @@ Drop this in a footer, homepage hero, or trust banner.
 Use on a product or entry detail page to show that element's own rating.
 
 ```twig
-{% set rating = craft.vouch.ratingForElement(entry.id) %}
+{% set rating = craft.vouch.rating(entry.id) %}
 {% set count = craft.vouch.reviews().relatedElementId(entry.id).count() %}
 
 {% if rating %}
@@ -284,7 +284,7 @@ Pulls reviews where the reviewer's email matched a Craft user account.
 Useful when you're pulling reviews from more than one provider and want to show each one's average side-by-side.
 
 ```twig
-{% for row in craft.vouch.ratingBreakdownForElement(entry.id) %}
+{% for row in craft.vouch.ratingsBySource(entry.id) %}
   <li>{{ row.sourceName }}: {{ row.average|number_format(1) }} ★ ({{ row.count }})</li>
 {% endfor %}
 ```
@@ -294,8 +294,8 @@ Useful when you're pulling reviews from more than one provider and want to show 
 Grab the high-rated reviews from one source.
 
 ```twig
-{% set google = craft.vouch.source('google-uk') %}
-{% set positive = craft.vouch.reviews().sourceId(google.id).rating('>= 4').all() %}
+{% set googleReviews = craft.vouch.source('googleReviews') %}
+{% set positive = craft.vouch.reviews().sourceId(googleReviews.id).rating('>= 4').all() %}
 ```
 
 ### Review properties
@@ -313,7 +313,7 @@ Each review element returned by `craft.vouch.reviews()` exposes:
 | `review.sourceName` | The source's display name (e.g. "Google UK") |
 | `review.sourceHandle` | The source's machine handle |
 | `review.providerHandle` | The connector handle (`google`, `trustpilot`, `feefo`, `reviewsio`, `manual`) |
-| `review.getReviewerUser()` | The Craft `User` element when the reviewer's email matched an account, otherwise `null` |
+| `review.reviewerUser` | The Craft `User` element when the reviewer's email matched an account, otherwise `null` |
 
 ### Full Twig API
 
@@ -325,8 +325,8 @@ Each review element returned by `craft.vouch.reviews()` exposes:
 | `craft.vouch.sourceById(id)` | A single `Source` by id |
 | `craft.vouch.providers()` | All registered connectors |
 | `craft.vouch.averageRating(sourceId?)` | Site-wide or per-source average rating |
-| `craft.vouch.ratingForElement(elementId)` | Average rating across approved reviews for one element |
-| `craft.vouch.ratingBreakdownForElement(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
+| `craft.vouch.rating(elementId)` | Average rating across approved reviews for one element |
+| `craft.vouch.ratingsBySource(elementId)` | Per-source rows of `{sourceId, sourceName, providerHandle, average, count}` |
 | `craft.vouch.settings` | The plugin's settings model (e.g. `craft.vouch.settings.pluginName`) |
 
 ## Sync

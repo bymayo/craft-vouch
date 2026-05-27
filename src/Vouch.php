@@ -248,10 +248,10 @@ class Vouch extends Plugin
                 if (!$element->id) return;
 
                 $reviews = self::getInstance()->reviews;
-                $avg = $reviews->averageRatingForElement($element->id);
+                $avg = $reviews->rating($element->id);
                 if ($avg === null) return;
 
-                $breakdown = $reviews->ratingBreakdownForElement($element->id);
+                $breakdown = $reviews->ratingsBySource($element->id);
                 $event->html .= self::buildRatingPaneHtml($avg, $breakdown, (int) $element->id, get_class($element));
             },
         );

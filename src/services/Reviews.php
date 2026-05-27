@@ -38,7 +38,7 @@ class Reviews extends Component
      * element id. Used by the entry/product index "Rating" column. Runs
      * as a single AVG aggregate so it stays cheap when the column is on.
      */
-    public function averageRatingForElement(int $elementId): ?float
+    public function rating(int $elementId): ?float
     {
         $avg = (new Query())
             ->from('{{%vouch_reviews}}')
@@ -80,7 +80,7 @@ class Reviews extends Component
      *
      * @return array<int, array{sourceId:int, sourceName:string, providerHandle:string, average:float, count:int}>
      */
-    public function ratingBreakdownForElement(int $elementId): array
+    public function ratingsBySource(int $elementId): array
     {
         $rows = (new Query())
             ->from(['r' => '{{%vouch_reviews}}'])

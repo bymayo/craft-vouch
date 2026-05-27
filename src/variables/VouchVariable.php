@@ -96,12 +96,12 @@ class VouchVariable
      * Average approved rating across all sources for a specific element
      * (entry, product, etc.). Use on a PDP / detail page:
      *
-     *   {% set rating = craft.vouch.ratingForElement(entry.id) %}
+     *   {% set rating = craft.vouch.rating(entry.id) %}
      */
-    public function ratingForElement(?int $elementId): ?float
+    public function rating(?int $elementId): ?float
     {
         if (!$elementId) return null;
-        return Vouch::getInstance()->reviews->averageRatingForElement($elementId);
+        return Vouch::getInstance()->reviews->rating($elementId);
     }
 
     /**
@@ -114,9 +114,9 @@ class VouchVariable
      *
      * @return array<int, array<string, mixed>>
      */
-    public function ratingBreakdownForElement(?int $elementId): array
+    public function ratingsBySource(?int $elementId): array
     {
         if (!$elementId) return [];
-        return Vouch::getInstance()->reviews->ratingBreakdownForElement($elementId);
+        return Vouch::getInstance()->reviews->ratingsBySource($elementId);
     }
 }

@@ -1,5 +1,24 @@
 # Vouch Changelog
 
+## 5.0.1 - 2026-05-27
+
+### Added
+- **Trustpilot Business Unit finder** on the Trustpilot source edit page. Search by company name or domain and click a result to fill in the Business Unit ID.
+- **Sources dashboard widget** - lists each pull-based source with its last-synced timestamp and a one-click Sync button. Manual sources are excluded. `sourceId` setting lets you scope the widget to a single source.
+- **Honeypot field** on the front-end submission controller. Include a `vouchHoneypot` input in your form; any non-empty value is silently discarded.
+- **Per-IP submission rate limiting**. New `submissionRateLimit` (default 5) and `submissionRateWindow` (default 60s) settings.
+- **`craft.vouch.settings`** Twig variable - direct access to the plugin's settings model (e.g. `craft.vouch.settings.headlineMaxLength`).
+
+### Changed
+- **Renamed** `Reviews::averageRatingForElement` → `Reviews::rating` (and the matching `craft.vouch.ratingForElement` → `craft.vouch.rating`).
+- **Renamed** `Reviews::ratingBreakdownForElement` → `Reviews::ratingsBySource` (and the matching `craft.vouch.ratingBreakdownForElement` → `craft.vouch.ratingsBySource`).
+- Cron-driven sync now runs inline. The `--sync` flag on `vouch/sync/*` commands has been dropped (it's the default and only mode).
+
+### Removed
+- Queue-backed sync path: `Sync::queue()`, `Sync::queueAll()`, and `SyncSourceJob` are gone. The CLI runs syncs inline; the queue runner is no longer involved.
+- Third-party provider extension API: `EVENT_REGISTER_PROVIDERS`, `RegisterProvidersEvent`, and `ProviderRegistry`'s registration event. Built-in providers are now a fixed list.
+- `craft.vouch.pluginName()` - use `craft.vouch.settings.pluginName` instead.
+
 ## 5.0.0 - 2026-05-26
 
 ### Added
