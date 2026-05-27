@@ -1,10 +1,10 @@
-<img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/src/icon.svg" width="70">
+<img src="https://raw.githubusercontent.com/bymayo/craft-vouch/craft-5/src/icon.svg" width="70">
 
 # Vouch for Craft CMS 5
 
 Pull customer reviews from Google, Trustpilot, Feefo and Reviews.io straight into Craft - or collect your own through the CP and a front-end form. Relate ratings to any element (entries, products, users, categories - you name it), block the spam, and render everything through Twig or GraphQL. You can also view and approve reviews straight from your dashboard with built-in widgets.
 
-<img src="https://raw.githubusercontent.com/bymayo/craft-vouch/main/resources/screenshot.png" width="850">
+<img src="https://raw.githubusercontent.com/bymayo/craft-vouch/craft-5/resources/screenshot.png" width="850">
 
 ## Features
 

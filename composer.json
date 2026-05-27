@@ -31,7 +31,7 @@
     "name": "Vouch",
     "developer": "ByMayo",
     "documentationUrl": "https://github.com/bymayo/craft-vouch",
-    "changelogUrl": "https://raw.githubusercontent.com/bymayo/craft-vouch/main/CHANGELOG.md",
+    "changelogUrl": "https://raw.githubusercontent.com/bymayo/craft-vouch/craft-5/CHANGELOG.md",
     "class": "bymayo\\vouch\\Vouch"
   },
   "config": {
