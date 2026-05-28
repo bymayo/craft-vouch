@@ -5,6 +5,7 @@
 ### Changed
 - The reviews screen on the user edit page now lives at `/admin/users/<id>/vouch` (and `/admin/myaccount/vouch` for the current user), shortened from the previous `…/vouch-reviews`.
 - The **Reviewer** column is hidden on that screen - every row is the same user, so it was redundant. The main reviews index at `/admin/vouch/reviews` is unchanged and still shows it.
+- The Sources dashboard widget now shows each source's provider alongside its name, e.g. "Company Reviews (Google Reviews)". Its **View** button now opens the reviews index filtered to that source, and a new **Edit** button links to the source settings.
 
 ## 5.0.2 - 2026-05-27
 

@@ -61,6 +61,7 @@ class SourcesWidget extends Widget
 
         return Craft::$app->getView()->renderTemplate('vouch/_widgets/sources/body', [
             'sources' => $sources,
+            'providers' => $vouch->providers->all(),
             'canSync' => Craft::$app->getUser()->checkPermission('vouch-syncSources'),
             'indexUrl' => UrlHelper::cpUrl('vouch/sources'),
         ], \craft\web\View::TEMPLATE_MODE_CP);

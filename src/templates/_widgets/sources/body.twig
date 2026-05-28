@@ -1,4 +1,5 @@
 {# @var sources \bymayo\vouch\models\Source[] #}
+{# @var providers \bymayo\vouch\connectors\ConnectorInterface[] #}
 {# @var canSync bool #}
 {# @var indexUrl string #}
 
@@ -6,8 +7,9 @@
     <p class="light">{{ 'No sources configured.'|t('vouch') }} <a href="{{ indexUrl }}">{{ 'Create one'|t('vouch') }}</a></p>
 {% else %}
     {% for source in sources %}
+        {% set connector = providers[source.providerHandle] ?? null %}
         <div class="vouch-widget-source" style="{% if not loop.first %}margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--gray-200);{% endif %}">
-            <strong style="display: block; margin-bottom: 8px;">{{ source.name }}</strong>
+            <strong style="display: block; margin-bottom: 8px;">{{ source.name }}{% if connector %} <span class="light" style="font-weight: normal;">({{ connector.displayName() }})</span>{% endif %}</strong>
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 {% if canSync %}
                     <button type="button" class="btn small vouch-sync-btn" data-source-id="{{ source.id }}" {% if not source.enabled %}disabled{% endif %}>
@@ -15,7 +17,10 @@
                     </button>
                 {% endif %}
                 <a href="{{ cpUrl('vouch/sources/' ~ source.id) }}" class="btn small">
-                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('eye') }}</span>{{ 'View'|t('vouch') }}
+                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('edit') }}</span>{{ 'Edit'|t('vouch') }}
+                </a>
+                <a href="{{ cpUrl('vouch/reviews', { source: 'source:' ~ source.id }) }}" class="btn small">
+                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('eye') }}</span>{{ 'View Reviews'|t('vouch') }}
                 </a>
             </div>
             <span class="light" style="font-size: 11px; display: block; margin-top: 8px;">
