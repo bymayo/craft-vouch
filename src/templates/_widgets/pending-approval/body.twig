@@ -2,7 +2,7 @@
 {# @var indexUrl string #}
 
 {% if reviews|length %}
-    <div class="tableview vouch-widget-tableview">
+    <div class="tableview vouch-widget-tableview vouch-pt-6">
         <div class="tablepane">
             <table class="data fullwidth vouch-widget-table">
                 <thead>
@@ -16,8 +16,8 @@
                 <tbody>
                     {% for review in reviews %}
                         <tr>
-                            <td class="vouch-widget-truncate" title="{{ review.getUiLabel() }}">
-                                <a href="{{ review.cpEditUrl }}">{{ review.getUiLabel() }}</a>
+                            <td class="vouch-widget-truncate !vouch-max-w-[280px] vouch-whitespace-nowrap vouch-overflow-hidden vouch-text-ellipsis" title="{{ review.getUiLabel() }}">
+                                <a href="{{ review.cpEditUrl }}" class="vouch-block vouch-overflow-hidden vouch-text-ellipsis vouch-whitespace-nowrap">{{ review.getUiLabel() }}</a>
                             </td>
                             <td>{{ review.rating }} ★</td>
                             <td class="light">{{ review.reviewerName ?: '-' }}</td>
@@ -31,30 +31,9 @@
         </div>
     </div>
 
-    <div class="vouch-widget-footer">
+    <div class="vouch-widget-footer vouch-mt-5 -vouch-mx-6 vouch-mb-0 vouch-pt-5 vouch-px-6 vouch-pb-0 vouch-border-t vouch-border-[color:var(--hairline-color)]">
         <a class="btn small" href="{{ indexUrl }}">{{ 'View all pending reviews'|t('vouch') }}</a>
     </div>
 {% else %}
     <p>{{ 'No reviews are awaiting approval.'|t('vouch') }}</p>
 {% endif %}
-
-{% css %}
-    .vouch-widget-tableview { padding-top: 24px; }
-    .vouch-widget-footer {
-        margin: 20px -24px 0;
-        padding: 20px 24px 0;
-        border-top: 1px solid var(--hairline-color);
-    }
-    .vouch-widget-table td.vouch-widget-truncate {
-        max-width: 280px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .vouch-widget-table td.vouch-widget-truncate a {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-{% endcss %}

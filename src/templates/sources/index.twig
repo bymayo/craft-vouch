@@ -12,6 +12,7 @@
 ] %}
 
 {% do view.registerAssetBundle('craft\\web\\assets\\admintable\\AdminTableAsset') %}
+{% do view.registerAssetBundle('bymayo\\vouch\\web\\assets\\vouch\\VouchAsset') %}
 
 {% block actionButton %}
     {% if providers|length and currentUser.can('vouch-createSources') %}
@@ -31,17 +32,17 @@
         {# Quick-add bar - one click straight to the new-source form for the
            chosen provider. Sits above the table rather than as an action
            button so all five providers are visible at once. #}
-        <div class="vouch-quickadd">
-            <h2>{{ 'Connect a new source'|t('vouch') }}</h2>
-            <div class="vouch-quickadd-tiles">
+        <div class="vouch-quickadd vouch-mb-[2em]">
+            <h2 class="vouch-m-0 vouch-mb-[.75em]">{{ 'Connect a new source'|t('vouch') }}</h2>
+            <div class="vouch-quickadd-tiles vouch-grid vouch-gap-[.6em] vouch-grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
                 {% for handle, connector in providers %}
-                    <a href="{{ url('vouch/sources/new/' ~ handle) }}" class="vouch-quickadd-tile">
+                    <a href="{{ url('vouch/sources/new/' ~ handle) }}" class="vouch-quickadd-tile vouch-flex vouch-items-center vouch-gap-[.75em] vouch-px-[.9em] vouch-py-[.75em] vouch-border vouch-border-[#d4d4d8] vouch-rounded-md vouch-bg-white vouch-text-inherit vouch-no-underline vouch-transition-[border-color] vouch-duration-150 hover:vouch-border-[#3D7AFF] hover:vouch-no-underline">
                         {% set icon = connector.icon() %}
                         {% if icon %}
-                            <span class="vouch-quickadd-icon">{{ icon|raw }}</span>
+                            <span class="vouch-quickadd-icon vouch-flex-[0_0_28px] vouch-w-7 vouch-h-7 vouch-inline-flex vouch-items-center vouch-justify-center [&_svg]:vouch-w-full [&_svg]:vouch-h-full">{{ icon|raw }}</span>
                         {% endif %}
-                        <span class="vouch-quickadd-label">
-                            <span class="vouch-quickadd-name">{{ connector.displayName() }}</span>
+                        <span class="vouch-quickadd-label vouch-flex vouch-flex-col vouch-leading-[1.2]">
+                            <span class="vouch-quickadd-name vouch-font-medium">{{ connector.displayName() }}</span>
                         </span>
                     </a>
                 {% endfor %}
@@ -50,55 +51,10 @@
 
         <hr>
 
-        <h2 class="vouch-existing-heading">{{ 'Existing sources'|t('vouch') }}</h2>
+        <h2 class="vouch-existing-heading vouch-m-0 vouch-mb-[.75em]">{{ 'Existing sources'|t('vouch') }}</h2>
 
         <div id="sources-vue-admin-table"></div>
     {% endif %}
-
-    <style>
-        .vouch-quickadd { margin-bottom: 2em; }
-        .vouch-quickadd h2 { margin: 0 0 .75em; }
-        .vouch-quickadd-tiles {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: .6em;
-        }
-        .vouch-quickadd-tile {
-            display: flex;
-            align-items: center;
-            gap: .75em;
-            padding: .75em .9em;
-            border: 1px solid #d4d4d8;
-            border-radius: 6px;
-            background: #fff;
-            text-decoration: none;
-            color: inherit;
-            transition: border-color .15s;
-        }
-        .vouch-quickadd-tile:hover {
-            border-color: #3D7AFF;
-            text-decoration: none;
-        }
-        .vouch-quickadd-icon {
-            flex: 0 0 28px;
-            width: 28px;
-            height: 28px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .vouch-quickadd-icon svg { width: 100%; height: 100%; }
-        .vouch-quickadd-label {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.2;
-        }
-        .vouch-quickadd-name { font-weight: 500; }
-        .vouch-existing-heading { margin: 0 0 .75em; }
-        /* Tighten the gap between the row-status dot and the title link
-           in the sources table - Craft's default margin sits a bit far. */
-        #sources-vue-admin-table .vuetable-component .status { margin-right: .35em; }
-    </style>
 
 {% endblock %}
 

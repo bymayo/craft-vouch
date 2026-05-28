@@ -1,0 +1,13 @@
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Hand-written rules for markup we don't control (third-party / JS-rendered
+ * DOM), so they can't be expressed as utilities on our own elements.
+ */
+
+/* Sources index: tighten the gap between the row-status dot and the title
+   link in the VueAdminTable - Craft's default margin sits a bit far. */
+#sources-vue-admin-table .vuetable-component .status {
+  margin-right: 0.35em;
+}

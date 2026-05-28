@@ -4,6 +4,7 @@ namespace bymayo\vouch\widgets;
 
 use bymayo\vouch\elements\Review;
 use bymayo\vouch\Vouch;
+use bymayo\vouch\web\assets\vouch\VouchAsset;
 use Craft;
 use craft\base\Widget;
 use craft\helpers\UrlHelper;
@@ -59,7 +60,10 @@ class LatestReviewsWidget extends Widget
             $query->sourceId($this->sourceId);
         }
 
-        return Craft::$app->getView()->renderTemplate('vouch/_widgets/latest-reviews/body', [
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(VouchAsset::class);
+
+        return $view->renderTemplate('vouch/_widgets/latest-reviews/body', [
             'reviews' => $query->all(),
             'indexUrl' => UrlHelper::cpUrl('vouch/reviews'),
         ], \craft\web\View::TEMPLATE_MODE_CP);

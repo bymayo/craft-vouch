@@ -3,7 +3,7 @@
 {# @var columnLabel string #}
 
 {% if rows|length %}
-    <div class="tableview vouch-widget-tableview">
+    <div class="tableview vouch-widget-tableview vouch-pt-6">
         <div class="tablepane">
             <table class="data fullwidth vouch-widget-table">
                 <thead>
@@ -36,18 +36,9 @@
         </div>
     </div>
 
-    <div class="vouch-widget-footer">
+    <div class="vouch-widget-footer vouch-mt-5 -vouch-mx-6 vouch-mb-0 vouch-pt-5 vouch-px-6 vouch-pb-0 vouch-border-t vouch-border-[color:var(--hairline-color)]">
         <a class="btn small" href="{{ cpUrl('vouch/reviews') }}">{{ 'View all reviews'|t('vouch') }}</a>
     </div>
 {% else %}
     <p>{{ 'No reviewed elements yet.'|t('vouch') }}</p>
 {% endif %}
-
-{% css %}
-    .vouch-widget-tableview { padding-top: 24px; }
-    .vouch-widget-footer {
-        margin: 20px -24px 0;
-        padding: 20px 24px 0;
-        border-top: 1px solid var(--hairline-color);
-    }
-{% endcss %}

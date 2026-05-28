@@ -40,7 +40,7 @@
     {% set capabilities = connector.capabilities() %}
     {% if source.id and (capabilities.pull ?? false) %}
         <div class="vouch-connection-status" data-source-id="{{ source.id }}">
-            <span class="status" style="background:#9CA3AF; border-color:#9CA3AF;"></span><span class="vouch-connection-text" style="font-weight:600; color:#6B7280;">{{ 'Checking…'|t('vouch') }}</span>
+            <span class="status vouch-bg-[#9CA3AF] vouch-border-[#9CA3AF]"></span><span class="vouch-connection-text vouch-font-semibold vouch-text-[#6B7280]">{{ 'Checking…'|t('vouch') }}</span>
         </div>
         <hr>
     {% endif %}
@@ -105,7 +105,7 @@
         {% set schema = schemas[handle] %}
         {% set isActive = handle == source.providerHandle %}
         {% if schema|length %}
-            <div class="vouch-schema-block" data-provider="{{ handle }}"{% if not isActive %} style="display:none;" hidden{% endif %}>
+            <div class="vouch-schema-block" data-provider="{{ handle }}"{% if not isActive %} hidden{% endif %}>
                 {% set activeMode = isActive ? (source.settings.mode ?? 'places') : 'places' %}
                 {% for field in schema %}
                     {% set isSecret = field.secret ?? false %}
@@ -152,64 +152,59 @@
 
                 {% if handle == 'trustpilot' %}
                     {# Search by name/domain to find the right Business Unit ID. #}
-                    <div class="vouch-trustpilot-finder"
-                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
-                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Find a Business Unit'|t('vouch') }}</h3>
-                        <p class="light" style="margin:0 0 10px 0;">
+                    <div class="vouch-trustpilot-finder vouch-mt-[18px] vouch-p-3.5 vouch-border vouch-border-[color:var(--hairline-color)] vouch-rounded-[5px]">
+                        <h3 class="vouch-m-0 vouch-mb-1.5 vouch-font-semibold">{{ 'Find a Business Unit'|t('vouch') }}</h3>
+                        <p class="light vouch-m-0 vouch-mb-2.5">
                             {{ 'Search Trustpilot by company name or domain. Requires the API key above to be filled in.'|t('vouch') }}
                         </p>
-                        <div style="display:flex;gap:8px;align-items:flex-start;">
-                            <input type="text" class="text fullwidth vouch-trustpilot-finder-query"
-                                   placeholder="{{ 'E.g. yourdomain.com or company name…'|t('vouch') }}"
-                                   style="flex:1;">
+                        <div class="vouch-flex vouch-gap-2 vouch-items-start">
+                            <input type="text" class="text fullwidth vouch-trustpilot-finder-query vouch-flex-1"
+                                   placeholder="{{ 'E.g. yourdomain.com or company name…'|t('vouch') }}">
                             <button type="button" class="btn submit vouch-trustpilot-finder-button">
                                 {{ 'Search'|t('vouch') }}
                             </button>
                         </div>
-                        <div class="vouch-trustpilot-finder-status light smalltext" style="margin-top:8px;"></div>
-                        <ul class="vouch-trustpilot-finder-results" style="margin:10px 0 0 0;padding:0;list-style:none;"></ul>
+                        <div class="vouch-trustpilot-finder-status light smalltext vouch-mt-2"></div>
+                        <ul class="vouch-trustpilot-finder-results vouch-m-0 vouch-mt-2.5 vouch-p-0 vouch-list-none"></ul>
                     </div>
                 {% endif %}
 
                 {% if handle == 'google' %}
                     {# Places-mode helper: Search by text to find the right Place ID.
                        Hidden when the Business Profile mode is active. #}
-                    <div class="vouch-google-finder vouch-mode-places{% if activeMode != 'places' %} hidden{% endif %}"
-                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
-                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Find a Place ID'|t('vouch') }}</h3>
-                        <p class="light" style="margin:0 0 10px 0;">
+                    <div class="vouch-google-finder vouch-mode-places vouch-mt-[18px] vouch-p-3.5 vouch-border vouch-border-[color:var(--hairline-color)] vouch-rounded-[5px]{% if activeMode != 'places' %} hidden{% endif %}">
+                        <h3 class="vouch-m-0 vouch-mb-1.5 vouch-font-semibold">{{ 'Find a Place ID'|t('vouch') }}</h3>
+                        <p class="light vouch-m-0 vouch-mb-2.5">
                             {{ 'Search Google Places by name or address. Requires the API key above to be filled in.'|t('vouch') }}
                         </p>
-                        <div style="display:flex;gap:8px;align-items:flex-start;">
-                            <input type="text" class="text fullwidth vouch-google-finder-query"
-                                   placeholder="{{ 'E.g. company name, address, zip code…'|t('vouch') }}"
-                                   style="flex:1;">
+                        <div class="vouch-flex vouch-gap-2 vouch-items-start">
+                            <input type="text" class="text fullwidth vouch-google-finder-query vouch-flex-1"
+                                   placeholder="{{ 'E.g. company name, address, zip code…'|t('vouch') }}">
                             <button type="button" class="btn submit vouch-google-finder-button">
                                 {{ 'Search'|t('vouch') }}
                             </button>
                         </div>
-                        <div class="vouch-google-finder-status light smalltext" style="margin-top:8px;"></div>
-                        <ul class="vouch-google-finder-results" style="margin:10px 0 0 0;padding:0;list-style:none;"></ul>
+                        <div class="vouch-google-finder-status light smalltext vouch-mt-2"></div>
+                        <ul class="vouch-google-finder-results vouch-m-0 vouch-mt-2.5 vouch-p-0 vouch-list-none"></ul>
                     </div>
 
                     {# Business-Profile-mode helper: Connect via OAuth.
                        Requires the source to be saved first (clientId/clientSecret
                        have to live on the source row before the redirect). #}
-                    <div class="vouch-google-oauth vouch-mode-businessProfile{% if activeMode != 'businessProfile' %} hidden{% endif %}"
-                         style="margin-top:18px;padding:14px;border:1px solid var(--hairline-color);border-radius:5px;">
-                        <h3 style="margin:0 0 6px 0;font-weight:600;">{{ 'Connect Google account'|t('vouch') }}</h3>
+                    <div class="vouch-google-oauth vouch-mode-businessProfile vouch-mt-[18px] vouch-p-3.5 vouch-border vouch-border-[color:var(--hairline-color)] vouch-rounded-[5px]{% if activeMode != 'businessProfile' %} hidden{% endif %}">
+                        <h3 class="vouch-m-0 vouch-mb-1.5 vouch-font-semibold">{{ 'Connect Google account'|t('vouch') }}</h3>
                         {% if not source.id %}
                             <p class="light">{{ 'Save the source first (with your Client ID + Client Secret filled in), then return here to connect.'|t('vouch') }}</p>
                         {% else %}
                             {% set hasRefreshToken = (source.credentials.refreshToken ?? '') != '' %}
                             {% if hasRefreshToken %}
-                                <p style="margin:0 0 8px 0;">
+                                <p class="vouch-m-0 vouch-mb-2">
                                     <span class="status green"></span>
                                     {{ 'Connected.'|t('vouch') }}
                                     <a href="{{ actionUrl('vouch/sources/connect-google', { sourceId: source.id, reconnect: 1 }) }}">{{ 'Reconnect'|t('vouch') }}</a>
                                 </p>
                             {% else %}
-                                <p class="light" style="margin:0 0 10px 0;">
+                                <p class="light vouch-m-0 vouch-mb-2.5">
                                     {{ 'Click below to authorise Vouch with your Google account. You\'ll be redirected to Google\'s consent screen.'|t('vouch') }}
                                 </p>
                                 <a href="{{ actionUrl('vouch/sources/connect-google', { sourceId: source.id }) }}" class="btn submit">
@@ -311,7 +306,7 @@
                 setStatus('', false);
                 places.forEach(function(p) {
                     var li = document.createElement('li');
-                    li.style.cssText = 'padding:8px;border:1px solid var(--hairline-color);border-radius:4px;margin-top:6px;cursor:pointer;';
+                    li.className = 'vouch-p-2 vouch-border vouch-border-[color:var(--hairline-color)] vouch-rounded vouch-mt-1.5 vouch-cursor-pointer';
                     li.innerHTML = '<strong></strong><div class="light smalltext"></div><code class="smalltext"></code>';
                     li.querySelector('strong').textContent = p.displayName || '(unnamed)';
                     li.querySelector('.light').textContent = p.address || '';
@@ -402,7 +397,7 @@
                 setStatus('', false);
                 units.forEach(function(u) {
                     var li = document.createElement('li');
-                    li.style.cssText = 'padding:8px;border:1px solid var(--hairline-color);border-radius:4px;margin-top:6px;cursor:pointer;';
+                    li.className = 'vouch-p-2 vouch-border vouch-border-[color:var(--hairline-color)] vouch-rounded vouch-mt-1.5 vouch-cursor-pointer';
                     li.innerHTML = '<strong></strong><div class="light smalltext"></div><code class="smalltext"></code>';
                     li.querySelector('strong').textContent = u.displayName || '(unnamed)';
                     li.querySelector('.light').textContent = u.websiteUrl || '';

@@ -3,14 +3,15 @@
 namespace bymayo\vouch\widgets;
 
 use bymayo\vouch\Vouch;
+use bymayo\vouch\web\assets\vouch\VouchAsset;
 use Craft;
 use craft\base\Widget;
 use craft\helpers\UrlHelper;
 
 /**
- * Dashboard widget listing configured pull-based sources with their last-synced
- * timestamp and a one-click Sync button. Manual sources are excluded since
- * there's nothing to pull.
+ * Dashboard widget listing configured sources with their last-synced timestamp
+ * and a one-click Sync button. Manual sources are included too, but since they
+ * have nothing to pull their Sync button and last-synced line are hidden.
  */
 class SourcesWidget extends Widget
 {
@@ -43,14 +44,7 @@ class SourcesWidget extends Widget
     public function getBodyHtml(): ?string
     {
         $vouch = Vouch::getInstance();
-        $allSources = $vouch->sources->getAllSources();
-
-        // Manual sources have nothing to pull, so they don't belong in a
-        // sync-focused widget.
-        $sources = array_values(array_filter(
-            $allSources,
-            fn($s) => $s->providerHandle !== 'manual',
-        ));
+        $sources = $vouch->sources->getAllSources();
 
         if ($this->sourceId) {
             $sources = array_values(array_filter(
@@ -59,7 +53,10 @@ class SourcesWidget extends Widget
             ));
         }
 
-        return Craft::$app->getView()->renderTemplate('vouch/_widgets/sources/body', [
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(VouchAsset::class);
+
+        return $view->renderTemplate('vouch/_widgets/sources/body', [
             'sources' => $sources,
             'providers' => $vouch->providers->all(),
             'canSync' => Craft::$app->getUser()->checkPermission('vouch-syncSources'),
@@ -76,9 +73,6 @@ class SourcesWidget extends Widget
         ];
 
         foreach ($allSources as $source) {
-            if ($source->providerHandle === 'manual') {
-                continue;
-            }
             $options[] = ['label' => $source->name, 'value' => $source->id];
         }
 

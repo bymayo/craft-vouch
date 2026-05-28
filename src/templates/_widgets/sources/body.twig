@@ -8,29 +8,32 @@
 {% else %}
     {% for source in sources %}
         {% set connector = providers[source.providerHandle] ?? null %}
-        <div class="vouch-widget-source" style="{% if not loop.first %}margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--gray-200);{% endif %}">
-            <strong style="display: block; margin-bottom: 8px;">{{ source.name }}{% if connector %} <span class="light" style="font-weight: normal;">({{ connector.displayName() }})</span>{% endif %}</strong>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                {% if canSync %}
+        {% set isManual = source.providerHandle == 'manual' %}
+        <div class="vouch-widget-source{% if not loop.first %} vouch-mt-3.5 vouch-pt-3.5 vouch-border-t vouch-border-[color:var(--gray-200)]{% endif %}">
+            <strong class="vouch-block vouch-mb-2">{{ source.name }}{% if connector %} <span class="light vouch-font-normal">({{ connector.displayName() }})</span>{% endif %}</strong>
+            <div class="vouch-flex vouch-flex-wrap vouch-gap-1.5">
+                {% if canSync and not isManual %}
                     <button type="button" class="btn small vouch-sync-btn" data-source-id="{{ source.id }}" {% if not source.enabled %}disabled{% endif %}>
-                        <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('arrows-rotate') }}</span>{{ 'Sync'|t('vouch') }}
+                        <span class="icon vouch-inline-flex vouch-w-3 vouch-h-3 vouch-mr-1 vouch-align-[-2px]">{{ iconSvg('arrows-rotate') }}</span>{{ 'Sync'|t('vouch') }}
                     </button>
                 {% endif %}
                 <a href="{{ cpUrl('vouch/sources/' ~ source.id) }}" class="btn small">
-                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('edit') }}</span>{{ 'Edit'|t('vouch') }}
+                    <span class="icon vouch-inline-flex vouch-w-3 vouch-h-3 vouch-mr-1 vouch-align-[-2px]">{{ iconSvg('edit') }}</span>{{ 'Edit'|t('vouch') }}
                 </a>
                 <a href="{{ cpUrl('vouch/reviews', { source: 'source:' ~ source.id }) }}" class="btn small">
-                    <span class="icon" style="display:inline-flex;width:12px;height:12px;vertical-align:-2px;margin-right:4px;">{{ iconSvg('eye') }}</span>{{ 'View Reviews'|t('vouch') }}
+                    <span class="icon vouch-inline-flex vouch-w-3 vouch-h-3 vouch-mr-1 vouch-align-[-2px]">{{ iconSvg('eye') }}</span>{{ 'View Reviews'|t('vouch') }}
                 </a>
             </div>
-            <span class="light" style="font-size: 11px; display: block; margin-top: 8px;">
-                {{ 'Last Synced:'|t('vouch') }}
-                {% if source.lastSyncedAt %}
-                    {{ source.lastSyncedAt|datetime('short') }}
-                {% else %}
-                    {{ 'Never'|t('vouch') }}
-                {% endif %}
-            </span>
+            {% if not isManual %}
+                <span class="light vouch-block vouch-mt-2 vouch-text-[11px]">
+                    {{ 'Last Synced:'|t('vouch') }}
+                    {% if source.lastSyncedAt %}
+                        {{ source.lastSyncedAt|datetime('short') }}
+                    {% else %}
+                        {{ 'Never'|t('vouch') }}
+                    {% endif %}
+                </span>
+            {% endif %}
         </div>
     {% endfor %}
 {% endif %}

@@ -4,6 +4,7 @@ namespace bymayo\vouch\widgets;
 
 use bymayo\vouch\elements\Review;
 use bymayo\vouch\Vouch;
+use bymayo\vouch\web\assets\vouch\VouchAsset;
 use Craft;
 use craft\base\Widget;
 use craft\helpers\UrlHelper;
@@ -53,7 +54,10 @@ class PendingApprovalWidget extends Widget
             ->limit($this->limit)
             ->all();
 
-        return Craft::$app->getView()->renderTemplate('vouch/_widgets/pending-approval/body', [
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(VouchAsset::class);
+
+        return $view->renderTemplate('vouch/_widgets/pending-approval/body', [
             'reviews' => $reviews,
             'indexUrl' => UrlHelper::cpUrl('vouch/reviews', ['source' => 'pending']),
         ], \craft\web\View::TEMPLATE_MODE_CP);

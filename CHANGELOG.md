@@ -5,7 +5,9 @@
 ### Changed
 - The reviews screen on the user edit page now lives at `/admin/users/<id>/vouch` (and `/admin/myaccount/vouch` for the current user), shortened from the previous `…/vouch-reviews`.
 - The **Reviewer** column is hidden on that screen - every row is the same user, so it was redundant. The main reviews index at `/admin/vouch/reviews` is unchanged and still shows it.
-- The Sources dashboard widget now shows each source's provider alongside its name, e.g. "Company Reviews (Google Reviews)". Its **View** button now opens the reviews index filtered to that source, and a new **Edit** button links to the source settings.
+- The Sources dashboard widget now shows each source's provider alongside its name, e.g. "Company Reviews (Google Reviews)". Its **View Reviews** button opens the reviews index filtered to that source, and a new **Edit** button links to the source settings.
+- Manual sources now appear in the Sources widget too; their Sync button and last-synced line are hidden since there's nothing to pull.
+- All control-panel templates (every dashboard widget, the sources index and the source edit page) now use prefixed Tailwind utility classes (`vouch-*`) instead of inline styles, `<style>` blocks and `{% css %}` blocks. Styles are compiled from `npm run build` into `src/web/assets/vouch/dist/vouch.css` and loaded via a Craft asset bundle. The only styles still set inline are values the JavaScript computes at runtime (the connection dot's resolved colour, show/hide toggles).
 
 ## 5.0.2 - 2026-05-27
 

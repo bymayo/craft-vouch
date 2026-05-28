@@ -3,6 +3,7 @@
 namespace bymayo\vouch\widgets;
 
 use bymayo\vouch\Vouch;
+use bymayo\vouch\web\assets\vouch\VouchAsset;
 use Craft;
 use craft\base\Widget;
 use craft\elements\Asset;
@@ -88,7 +89,10 @@ class TopReviewedElementsWidget extends Widget
             ? $this->elementType::displayName()
             : Craft::t('vouch', 'Element');
 
-        return Craft::$app->getView()->renderTemplate('vouch/_widgets/top-reviewed-elements/body', [
+        $view = Craft::$app->getView();
+        $view->registerAssetBundle(VouchAsset::class);
+
+        return $view->renderTemplate('vouch/_widgets/top-reviewed-elements/body', [
             'rows' => $rows,
             'elementsById' => $elementsById,
             'columnLabel' => $columnLabel,

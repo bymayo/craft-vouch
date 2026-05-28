@@ -1,0 +1,12 @@
+{
+  "name": "craft-vouch",
+  "private": true,
+  "description": "Build tooling for the Vouch plugin's control-panel styles (Tailwind, vouch- prefixed).",
+  "scripts": {
+    "dev": "tailwindcss -i ./src/web/assets/vouch/src/vouch.css -o ./src/web/assets/vouch/dist/vouch.css --watch",
+    "build": "tailwindcss -i ./src/web/assets/vouch/src/vouch.css -o ./src/web/assets/vouch/dist/vouch.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
