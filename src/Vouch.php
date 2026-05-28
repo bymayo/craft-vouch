@@ -533,8 +533,8 @@ class Vouch extends Plugin
                 // Vouch screen on the user edit page (and the user's own
                 // /myaccount). The controller renders an embedded reviews
                 // index filtered to the chosen user.
-                $event->rules['users/<userId:\d+>/vouch-reviews'] = 'vouch/users/index';
-                $event->rules['myaccount/vouch-reviews'] = 'vouch/users/index';
+                $event->rules['users/<userId:\d+>/vouch'] = 'vouch/users/index';
+                $event->rules['myaccount/vouch'] = 'vouch/users/index';
             }
         );
 

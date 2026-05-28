@@ -1,7 +1,7 @@
 {
   "name": "bymayo/vouch",
   "description": "Customer reviews for Craft CMS - pull from Google, Trustpilot, Feefo and Reviews.io, or collect your own.",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "type": "craft-plugin",
   "license": "proprietary",
   "support": {

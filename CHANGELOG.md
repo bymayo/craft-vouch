@@ -1,5 +1,11 @@
 # Vouch Changelog
 
+## 5.0.3 - 2026-05-28
+
+### Changed
+- The reviews screen on the user edit page now lives at `/admin/users/<id>/vouch` (and `/admin/myaccount/vouch` for the current user), shortened from the previous `…/vouch-reviews`.
+- The **Reviewer** column is hidden on that screen - every row is the same user, so it was redundant. The main reviews index at `/admin/vouch/reviews` is unchanged and still shows it.
+
 ## 5.0.2 - 2026-05-27
 
 ### Added

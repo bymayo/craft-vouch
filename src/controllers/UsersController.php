@@ -21,7 +21,7 @@ class UsersController extends Controller
 {
     use EditUserTrait;
 
-    public const SCREEN_REVIEWS = 'vouch-reviews';
+    public const SCREEN_REVIEWS = 'vouch';
 
     public function actionIndex(?int $userId = null): Response
     {
@@ -37,6 +37,15 @@ class UsersController extends Controller
                 'context' => 'embedded-index',
                 'sources' => false,
                 'showSiteMenu' => false,
+                // Drop the "Reviewer" column here - every row is this user, so
+                // it'd be redundant. The main index keeps it via
+                // Review::defineDefaultTableAttributes().
+                'defaultTableColumns' => [
+                    ['rating'],
+                    ['source'],
+                    ['relatedElement'],
+                    ['reviewedAt'],
+                ],
                 'jsSettings' => [
                     'criteria' => [
                         'reviewerUserId' => $user->id,
